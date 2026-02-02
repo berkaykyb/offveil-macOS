@@ -9,9 +9,43 @@ import SwiftUI
 
 struct MenuBarPopoverView: View {
     @State private var isActive = false
+    @State private var showSettings = false
     
     var body: some View {
+        ZStack {
+            // Ana Panel
+            if !showSettings {
+                mainView
+                    .transition(.move(edge: .leading))
+            }
+            
+            // Ayarlar Panel
+            if showSettings {
+                SettingsView(isPresented: $showSettings)
+                    .transition(.move(edge: .trailing))
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showSettings)
+    }
+    
+    private var mainView: some View {
         VStack(spacing: 20) {
+            // Ayarlar butonu
+            HStack {
+                Spacer()
+                Button(action: {
+                    showSettings = true
+                }) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.secondary)
+                        .padding(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            
             Spacer()
             
             // Power Button
