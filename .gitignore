@@ -1,0 +1,12 @@
+# Local development files
+.DS_Store
+ROADMAP.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+engine/__pycache__/
+engine/*.pyc
