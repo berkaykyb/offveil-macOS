@@ -6,31 +6,25 @@
 //
 
 import SwiftUI
+
 struct MenuBarPopoverView: View {
+    @State private var isActive = false
+    
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
             
-            // Büyük yuvarlak buton (placeholder)
-            Button(action: {
-                print("Buton tıklandı")
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(width: 120, height: 120)
-                    
-                    Image(systemName: "power")
-                        .font(.system(size: 50))
-                        .foregroundColor(.gray)
-                }
+            // Power Button
+            PowerButton(isActive: $isActive) {
+                isActive.toggle()
+                print("Durum değişti: \(isActive ? "Aktif" : "Kapalı")")
             }
-            .buttonStyle(PlainButtonStyle())
             
             // Durum yazısı
-            Text("Kapalı")
+            Text(isActive ? "Aktif" : "Kapalı")
                 .font(.title2)
-                .foregroundColor(.secondary)
+                .foregroundColor(isActive ? .green : .secondary)
+                .animation(.easeInOut, value: isActive)
             
             Spacer()
         }
