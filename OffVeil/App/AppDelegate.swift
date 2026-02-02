@@ -10,6 +10,7 @@ import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
+    private var popover: NSPopover?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Menü bar item oluştur
@@ -20,9 +21,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(statusItemClicked)
             button.target = self
         }
+        
+        // Popover oluştur
+        popover = NSPopover()
+        popover?.contentSize = NSSize(width: 300, height: 400)
+        popover?.behavior = .transient
+        popover?.contentViewController = NSHostingController(rootView: MenuBarPopoverView())
     }
     
     @objc func statusItemClicked() {
-        print("Menü bar'a tıklandı!")
+        guard let button = statusItem?.button else { return }
+        
+        if let popover = popover {
+            if popover.isShown {
+                popover.performClose(nil)
+            } else {
+                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            }
+        }
     }
 }
