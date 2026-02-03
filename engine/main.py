@@ -6,6 +6,7 @@ Komut alan ve JSON döndüren basit motor
 import sys
 import json
 from datetime import datetime
+import dns_manager
 
 
 def main():
@@ -41,13 +42,17 @@ def handle_status():
 
 def handle_get_dns():
     """Mevcut DNS ayarlarını oku"""
-    response = {
-        "success": True,
-        "dns_servers": ["8.8.8.8", "8.8.4.4"],  # Placeholder
-        "interface": "Wi-Fi",
-        "timestamp": datetime.now().isoformat()
-    }
-    print(json.dumps(response))
+    try:
+        dns_config = dns_manager.get_all_dns()
+        
+        response = {
+            "success": True,
+            "dns_config": dns_config,
+            "timestamp": datetime.now().isoformat()
+        }
+        print(json.dumps(response))
+    except Exception as e:
+        error_response(f"Failed to get DNS: {str(e)}")
 
 
 def handle_activate():
