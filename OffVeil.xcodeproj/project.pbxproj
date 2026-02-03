@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5F69727D2F3177DA00C301E8 /* engine in Resources */ = {isa = PBXBuildFile; fileRef = 5F69727C2F3177DA00C301E8 /* engine */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		5F6972452F30CB5600C301E8 /* OffVeil.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OffVeil.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F69727C2F3177DA00C301E8 /* engine */ = {isa = PBXFileReference; lastKnownFileType = folder; path = engine; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +37,7 @@
 		5F69723C2F30CB5600C301E8 = {
 			isa = PBXGroup;
 			children = (
+				5F69727C2F3177DA00C301E8 /* engine */,
 				5F6972472F30CB5600C301E8 /* OffVeil */,
 				5F6972462F30CB5600C301E8 /* Products */,
 			);
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5F69727D2F3177DA00C301E8 /* engine in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

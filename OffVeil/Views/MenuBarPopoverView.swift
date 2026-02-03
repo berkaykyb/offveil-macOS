@@ -50,8 +50,16 @@ struct MenuBarPopoverView: View {
             
             // Power Button
             PowerButton(isActive: $isActive) {
-                isActive.toggle()
-                print("Durum değişti: \(isActive ? "Aktif" : "Kapalı")")
+                Task {
+                    let result = await EngineService.shared.getDNS()
+                    switch result {
+                    case .success(let data):
+                        print("DNS Config:", data)
+                        isActive.toggle()
+                    case .failure(let error):
+                        print("Error:", error)
+                    }
+                }
             }
             
             // Durum yazısı
