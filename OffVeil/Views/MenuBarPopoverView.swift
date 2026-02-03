@@ -51,13 +51,24 @@ struct MenuBarPopoverView: View {
             // Power Button
             PowerButton(isActive: $isActive) {
                 Task {
-                    let result = await EngineService.shared.getDNS()
-                    switch result {
-                    case .success(let data):
-                        print("DNS Config:", data)
-                        isActive.toggle()
-                    case .failure(let error):
-                        print("Error:", error)
+                    if isActive {
+                        let result = await EngineService.shared.executeCommand("deactivate")
+                        switch result {
+                        case .success(let data):
+                            print("Deactivated:", data)
+                            isActive = false
+                        case .failure(let error):
+                            print("Deactivation Error:", error)
+                        }
+                    } else {
+                        let result = await EngineService.shared.executeCommand("activate")
+                        switch result {
+                        case .success(let data):
+                            print("Activated:", data)
+                            isActive = true
+                        case .failure(let error):
+                            print("Activation Error:", error)
+                        }
                     }
                 }
             }
