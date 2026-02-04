@@ -30,10 +30,6 @@ def main():
         handle_check_and_restore()
     elif command == "detect_isp":
         handle_detect_isp()
-    elif command == "start_proxy":
-        handle_start_proxy()
-    elif command == "stop_proxy":
-        handle_stop_proxy()
     else:
         error_response(f"Unknown command: {command}")
 
@@ -268,73 +264,6 @@ def handle_check_and_restore():
         
     except Exception as e:
         error_response(f"Check and restore failed: {str(e)}")
-
-
-def handle_start_proxy():
-    global proxy_server
-    try:
-        if proxy_server and proxy_server.running:
-            error_response("Proxy already running")
-            return
-        
-        wifi_interface = None
-        for interface in dns_manager.get_active_interfaces():
-            if "Wi-Fi" in interface:
-                wifi_interface = interface
-                break
-        
-        if not wifi_interface:
-            error_response("Wi-Fi interface not found")
-            return
-        
-        proxy_server = DPIBypass()
-        proxy_thread = threading.Thread(target=proxy_server.start, daemon=True)
-        proxy_thread.start()
-        
-        import time
-        time.sleep(0.5)
-        
-        proxy_manager.set_system_proxy(wifi_interface, '127.0.0.1', 8080)
-        
-        response = {
-            "success": True,
-            "message": "DPI Bypass proxy started",
-            "proxy": "127.0.0.1:8080",
-            "interface": wifi_interface,
-            "timestamp": datetime.now().isoformat()
-        }
-        print(json.dumps(response))
-        
-    except Exception as e:
-        error_response(f"Failed to start proxy: {str(e)}")
-
-
-def handle_stop_proxy():
-    global proxy_server
-    try:
-        wifi_interface = None
-        for interface in dns_manager.get_active_interfaces():
-            if "Wi-Fi" in interface:
-                wifi_interface = interface
-                break
-        
-        if wifi_interface:
-            proxy_manager.clear_system_proxy(wifi_interface)
-        
-        if proxy_server:
-            proxy_server.stop()
-            proxy_server = None
-        
-        response = {
-            "success": True,
-            "message": "DPI Bypass proxy stopped",
-            "interface": wifi_interface,
-            "timestamp": datetime.now().isoformat()
-        }
-        print(json.dumps(response))
-        
-    except Exception as e:
-        error_response(f"Failed to stop proxy: {str(e)}")
 
 
 def error_response(message):

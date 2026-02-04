@@ -8,11 +8,55 @@
 
 /* Begin PBXBuildFile section */
 		5F69727D2F3177DA00C301E8 /* engine in Resources */ = {isa = PBXBuildFile; fileRef = 5F69727C2F3177DA00C301E8 /* engine */; };
+		5F69729D2F3407BE00C301E8 /* com.offveil.OffVeilHelper in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5F69728A2F34047300C301E8 /* com.offveil.OffVeilHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5F69729A2F34079A00C301E8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5F69723D2F30CB5600C301E8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5F6972892F34047300C301E8;
+			remoteInfo = OffVeilHelper;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5F6972882F34047300C301E8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		5F6972992F34073A00C301E8 /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstPath = Contents/Library/LaunchServices;
+			dstSubfolderSpec = 1;
+			files = (
+			);
+			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		5F69729C2F3407A700C301E8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Library/LaunchServices;
+			dstSubfolderSpec = 1;
+			files = (
+				5F69729D2F3407BE00C301E8 /* com.offveil.OffVeilHelper in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		5F6972452F30CB5600C301E8 /* OffVeil.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OffVeil.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5F69727C2F3177DA00C301E8 /* engine */ = {isa = PBXFileReference; lastKnownFileType = folder; path = engine; sourceTree = "<group>"; };
+		5F69728A2F34047300C301E8 /* com.offveil.OffVeilHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = com.offveil.OffVeilHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -21,10 +65,22 @@
 			path = OffVeil;
 			sourceTree = "<group>";
 		};
+		5F69728B2F34047300C301E8 /* OffVeilHelper */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OffVeilHelper;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		5F6972422F30CB5600C301E8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5F6972872F34047300C301E8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -39,6 +95,7 @@
 			children = (
 				5F69727C2F3177DA00C301E8 /* engine */,
 				5F6972472F30CB5600C301E8 /* OffVeil */,
+				5F69728B2F34047300C301E8 /* OffVeilHelper */,
 				5F6972462F30CB5600C301E8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -47,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				5F6972452F30CB5600C301E8 /* OffVeil.app */,
+				5F69728A2F34047300C301E8 /* com.offveil.OffVeilHelper */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,10 +119,12 @@
 				5F6972412F30CB5600C301E8 /* Sources */,
 				5F6972422F30CB5600C301E8 /* Frameworks */,
 				5F6972432F30CB5600C301E8 /* Resources */,
+				5F69729C2F3407A700C301E8 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				5F69729B2F34079A00C301E8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5F6972472F30CB5600C301E8 /* OffVeil */,
@@ -75,6 +135,29 @@
 			productName = OffVeil;
 			productReference = 5F6972452F30CB5600C301E8 /* OffVeil.app */;
 			productType = "com.apple.product-type.application";
+		};
+		5F6972892F34047300C301E8 /* OffVeilHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5F69728E2F34047300C301E8 /* Build configuration list for PBXNativeTarget "OffVeilHelper" */;
+			buildPhases = (
+				5F6972862F34047300C301E8 /* Sources */,
+				5F6972872F34047300C301E8 /* Frameworks */,
+				5F6972882F34047300C301E8 /* CopyFiles */,
+				5F6972992F34073A00C301E8 /* Copy Files */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5F69728B2F34047300C301E8 /* OffVeilHelper */,
+			);
+			name = OffVeilHelper;
+			packageProductDependencies = (
+			);
+			productName = OffVeilHelper;
+			productReference = 5F69728A2F34047300C301E8 /* com.offveil.OffVeilHelper */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -87,6 +170,9 @@
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					5F6972442F30CB5600C301E8 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					5F6972892F34047300C301E8 = {
 						CreatedOnToolsVersion = 16.4;
 					};
 				};
@@ -106,6 +192,7 @@
 			projectRoot = "";
 			targets = (
 				5F6972442F30CB5600C301E8 /* OffVeil */,
+				5F6972892F34047300C301E8 /* OffVeilHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -129,7 +216,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5F6972862F34047300C301E8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5F69729B2F34079A00C301E8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5F6972892F34047300C301E8 /* OffVeilHelper */;
+			targetProxy = 5F69729A2F34079A00C301E8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		5F69724F2F30CB5700C301E8 /* Debug */ = {
@@ -302,6 +404,30 @@
 			};
 			name = Release;
 		};
+		5F69728F2F34047300C301E8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = OffVeilHelper/OffVeilHelper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(CONTENTS_FOLDER_PATH)/Library/LaunchServices";
+				PRODUCT_NAME = com.offveil.OffVeilHelper;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		5F6972902F34047300C301E8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = OffVeilHelper/OffVeilHelper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(CONTENTS_FOLDER_PATH)/Library/LaunchServices";
+				PRODUCT_NAME = com.offveil.OffVeilHelper;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -319,6 +445,15 @@
 			buildConfigurations = (
 				5F6972522F30CB5700C301E8 /* Debug */,
 				5F6972532F30CB5700C301E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5F69728E2F34047300C301E8 /* Build configuration list for PBXNativeTarget "OffVeilHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5F69728F2F34047300C301E8 /* Debug */,
+				5F6972902F34047300C301E8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
