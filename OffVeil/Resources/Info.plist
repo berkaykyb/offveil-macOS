@@ -4,5 +4,9 @@
 <dict>
 	<key>LSUIElement</key>
 	<true/>
+	<key>SMAuthorizedClients</key>
+	<array>
+		<string>identifier "com.berkay.OffVeil" and anchor apple generic</string>
+	</array>
 </dict>
 </plist>

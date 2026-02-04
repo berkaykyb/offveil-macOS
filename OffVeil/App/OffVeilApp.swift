@@ -13,8 +13,8 @@ struct OffVeilApp: App {
     
     init() {
         // Fail-safe: Uygulama açıldığında orphaned state varsa DNS'i geri yükle
-        Task {
-            await performFailSafeCheck()
+        Task.detached {
+            await Self.performFailSafeCheck()
         }
     }
     
@@ -24,7 +24,7 @@ struct OffVeilApp: App {
         }
     }
     
-    private func performFailSafeCheck() async {
+    private static func performFailSafeCheck() async {
         let result = await EngineService.shared.executeCommand("check_and_restore")
         switch result {
         case .success(let data):

@@ -9,8 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Binding var isPresented: Bool
-    @State private var launchAtLogin = false
-    @State private var showNotifications = true
+    @ObservedObject private var settings = SettingsManager.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -45,7 +44,7 @@ struct SettingsView: View {
                 // Başlangıçta Başlat
                 SettingsToggleRow(
                     title: "Başlangıçta Başlat",
-                    isOn: $launchAtLogin
+                    isOn: $settings.launchAtLogin
                 )
                 
                 Divider()
@@ -54,7 +53,7 @@ struct SettingsView: View {
                 // Bildirimler
                 SettingsToggleRow(
                     title: "Bildirimler",
-                    isOn: $showNotifications
+                    isOn: $settings.showNotifications
                 )
                 
                 Divider()
