@@ -30,6 +30,8 @@ def main():
         handle_activate()
     elif command == "deactivate":
         handle_deactivate()
+    elif command == "check_and_restore":
+        handle_check_and_restore()
     elif command == "start_proxy":
         handle_start_proxy()
     elif command == "stop_proxy":
@@ -71,38 +73,36 @@ def handle_activate():
             error_response("Already active")
             return
         
-        # Mevcut DNS'leri kaydet
-        interfaces = dns_manager.get_active_interfaces()
-        current_dns_config = dns_manager.get_all_dns()
-        actual_dns = dns_manager.get_current_dns()
+        # Aktif servisi otomatik tespit et
+        primary_service = dns_manager.get_primary_service()
         
-        # Cloudflare DNS
-        cloudflare_dns = ["1.1.1.1", "1.0.0.1"]
-        
-        # Wi-Fi'yi bul ve DNS değiştir
-        wifi_interface = None
-        for interface in interfaces:
-            if "Wi-Fi" in interface:
-                wifi_interface = interface
-                break
-        
-        if not wifi_interface:
-            error_response("Wi-Fi interface not found")
+        if not primary_service:
+            error_response("No active network service found")
             return
         
+        # Mevcut DNS'leri kaydet
+        current_dns_config = dns_manager.get_all_dns()
+        actual_dns = dns_manager.get_current_dns()
+        original_dns = dns_manager.get_dns_servers(primary_service)
+        
+        # DNS'i 1.1.1.1 ve 8.8.8.8 olarak ayarla
+        new_dns = ["1.1.1.1", "8.8.8.8"]
+        
         # DNS'i değiştir
-        success = dns_manager.set_dns_servers(wifi_interface, cloudflare_dns)
+        success = dns_manager.set_dns_servers(primary_service, new_dns)
         
         if not success:
             error_response("Failed to set DNS")
             return
         
-        # Durumu kaydet
+        # Durumu kaydet (birebir geri yükleme için)
         state_data = {
             "active": True,
+            "active_interface": primary_service,
+            "original_dns": original_dns,
             "original_dns_config": current_dns_config,
-            "actual_dns": actual_dns,
-            "active_interface": wifi_interface,
+            "actual_dns_before": actual_dns,
+            "was_dhcp": len(original_dns) == 0,
             "timestamp": datetime.now().isoformat()
         }
         state_manager.save_state(state_data)
@@ -111,8 +111,8 @@ def handle_activate():
             "success": True,
             "message": "Activated successfully",
             "status": "active",
-            "interface": wifi_interface,
-            "dns": cloudflare_dns,
+            "interface": primary_service,
+            "dns": new_dns,
             "timestamp": datetime.now().isoformat()
         }
         print(json.dumps(response))
@@ -135,14 +135,15 @@ def handle_deactivate():
             return
         
         interface = state.get("active_interface")
-        original_dns = state.get("original_dns_config", {}).get(interface, [])
+        original_dns = state.get("original_dns", [])
+        was_dhcp = state.get("was_dhcp", False)
         
         if not interface:
             error_response("No interface info in state")
             return
         
-        # DNS'i geri yükle (boşa çevir = DHCP'ye dön)
-        if len(original_dns) == 0:
+        # DNS'i AYNEN geri yükle
+        if was_dhcp or len(original_dns) == 0:
             # DHCP'ye dön
             success = dns_manager.clear_dns_servers(interface)
         else:
@@ -150,8 +151,7 @@ def handle_deactivate():
             success = dns_manager.set_dns_servers(interface, original_dns)
         
         if not success:
-            error_response("Failed to restore DNS")
-            return
+            print(f"Warning: Failed to restore DNS for {interface}")
         
         # State'i temizle
         state_manager.clear_state()
@@ -161,12 +161,66 @@ def handle_deactivate():
             "message": "Deactivated successfully",
             "status": "inactive",
             "interface": interface,
+            "restored_dhcp": was_dhcp,
             "timestamp": datetime.now().isoformat()
         }
         print(json.dumps(response))
         
     except Exception as e:
         error_response(f"Deactivation failed: {str(e)}")
+
+
+def handle_check_and_restore():
+    """Fail-safe: Uygulama başlangıcında state kontrol et, gerekirse DNS'i geri yükle"""
+    try:
+        if not state_manager.is_active():
+            response = {
+                "success": True,
+                "message": "No active state, nothing to restore",
+                "action": "none"
+            }
+            print(json.dumps(response))
+            return
+        
+        state = state_manager.load_state()
+        if not state:
+            response = {
+                "success": True,
+                "message": "State file exists but empty, clearing",
+                "action": "cleared"
+            }
+            state_manager.clear_state()
+            print(json.dumps(response))
+            return
+        
+        interface = state.get("active_interface")
+        original_dns = state.get("original_dns", [])
+        was_dhcp = state.get("was_dhcp", False)
+        
+        if not interface:
+            state_manager.clear_state()
+            error_response("Invalid state, cleared")
+            return
+        
+        # DNS'i geri yükle
+        if was_dhcp or len(original_dns) == 0:
+            dns_manager.clear_dns_servers(interface)
+        else:
+            dns_manager.set_dns_servers(interface, original_dns)
+        
+        state_manager.clear_state()
+        
+        response = {
+            "success": True,
+            "message": "Restored DNS from orphaned state",
+            "action": "restored",
+            "interface": interface,
+            "restored_dhcp": was_dhcp
+        }
+        print(json.dumps(response))
+        
+    except Exception as e:
+        error_response(f"Check and restore failed: {str(e)}")
 
 
 def handle_start_proxy():

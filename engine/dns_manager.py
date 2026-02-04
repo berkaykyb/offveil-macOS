@@ -3,6 +3,41 @@ import json
 import re
 
 
+def get_primary_service():
+    """Aktif olarak internet bağlantısı sağlayan servis"""
+    try:
+        result = subprocess.run(
+            ["route", "-n", "get", "default"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        for line in result.stdout.split('\n'):
+            if 'interface:' in line:
+                interface_id = line.split(':')[1].strip()
+                
+                service_result = subprocess.run(
+                    ["networksetup", "-listallhardwareports"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                
+                lines = service_result.stdout.split('\n')
+                for i, line in enumerate(lines):
+                    if f"Device: {interface_id}" in line:
+                        for j in range(i-1, max(0, i-5), -1):
+                            if "Hardware Port:" in lines[j]:
+                                service_name = lines[j].split(':')[1].strip()
+                                return service_name
+        
+        return None
+    
+    except:
+        return None
+
+
 def get_active_interfaces():
     """Aktif network interface'lerini bul"""
     try:
