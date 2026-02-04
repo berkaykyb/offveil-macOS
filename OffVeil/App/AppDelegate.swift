@@ -40,4 +40,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        // Uygulama kapanırken DNS'i geri yükle
+        Task {
+            await restoreDNSOnExit()
+        }
+    }
+    
+    private func restoreDNSOnExit() async {
+        let result = await EngineService.shared.executeCommand("check_and_restore")
+        switch result {
+        case .success(let data):
+            if let action = data["action"] as? String, action == "restored" {
+                print("Exit cleanup: DNS restored successfully")
+            }
+        case .failure(let error):
+            print("Exit cleanup error:", error)
+        }
+    }
 }

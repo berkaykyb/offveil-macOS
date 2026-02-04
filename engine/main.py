@@ -103,6 +103,7 @@ def handle_activate():
             "original_dns_config": current_dns_config,
             "actual_dns_before": actual_dns,
             "was_dhcp": len(original_dns) == 0,
+            "restore_attempts": 0,
             "timestamp": datetime.now().isoformat()
         }
         state_manager.save_state(state_data)
@@ -196,28 +197,51 @@ def handle_check_and_restore():
         interface = state.get("active_interface")
         original_dns = state.get("original_dns", [])
         was_dhcp = state.get("was_dhcp", False)
+        attempts = state_manager.get_restore_attempts()
         
         if not interface:
             state_manager.clear_state()
             error_response("Invalid state, cleared")
             return
         
+        # Max 3 deneme yap
+        if attempts >= 3:
+            print(f"Warning: Restore failed after {attempts} attempts, giving up")
+            state_manager.clear_state()
+            error_response(f"Restore failed after {attempts} attempts")
+            return
+        
         # DNS'i geri yükle
-        if was_dhcp or len(original_dns) == 0:
-            dns_manager.clear_dns_servers(interface)
+        success = False
+        try:
+            if was_dhcp or len(original_dns) == 0:
+                success = dns_manager.clear_dns_servers(interface)
+            else:
+                success = dns_manager.set_dns_servers(interface, original_dns)
+        except Exception as e:
+            print(f"DNS restore error: {e}")
+            success = False
+        
+        if success:
+            state_manager.clear_state()
+            response = {
+                "success": True,
+                "message": "Restored DNS from orphaned state",
+                "action": "restored",
+                "interface": interface,
+                "restored_dhcp": was_dhcp,
+                "attempts": attempts + 1
+            }
+            print(json.dumps(response))
         else:
-            dns_manager.set_dns_servers(interface, original_dns)
-        
-        state_manager.clear_state()
-        
-        response = {
-            "success": True,
-            "message": "Restored DNS from orphaned state",
-            "action": "restored",
-            "interface": interface,
-            "restored_dhcp": was_dhcp
-        }
-        print(json.dumps(response))
+            state_manager.increment_restore_attempts()
+            response = {
+                "success": False,
+                "message": f"DNS restore failed (attempt {attempts + 1}/3)",
+                "action": "retry",
+                "attempts": attempts + 1
+            }
+            print(json.dumps(response))
         
     except Exception as e:
         error_response(f"Check and restore failed: {str(e)}")
