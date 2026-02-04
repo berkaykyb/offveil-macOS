@@ -10,6 +10,7 @@ import SwiftUI
 struct MenuBarPopoverView: View {
     @State private var isActive = false
     @State private var showSettings = false
+    @StateObject private var ispManager = ISPManager.shared
     
     var body: some View {
         ZStack {
@@ -26,13 +27,30 @@ struct MenuBarPopoverView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showSettings)
+        .onAppear {
+            ispManager.detectISP()
+        }
     }
     
     private var mainView: some View {
         VStack(spacing: 20) {
-            // Ayarlar butonu
+            // Üst bar: ISS + Ayarlar
             HStack {
+                // ISS göstergesi
+                HStack(spacing: 6) {
+                    Image(systemName: "network")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    Text(ispManager.ispName)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .opacity(ispManager.isDetecting ? 0.5 : 1.0)
+                }
+                .padding(.leading, 12)
+                
                 Spacer()
+                
+                // Ayarlar butonu
                 Button(action: {
                     showSettings = true
                 }) {

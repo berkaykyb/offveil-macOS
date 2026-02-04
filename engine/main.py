@@ -8,11 +8,7 @@ import json
 from datetime import datetime
 import dns_manager
 import state_manager
-import proxy_manager
-import threading
-from dpi_bypass import DPIBypass
-
-proxy_server = None
+import isp_detector
 
 
 def main():
@@ -32,6 +28,8 @@ def main():
         handle_deactivate()
     elif command == "check_and_restore":
         handle_check_and_restore()
+    elif command == "detect_isp":
+        handle_detect_isp()
     elif command == "start_proxy":
         handle_start_proxy()
     elif command == "stop_proxy":
@@ -169,6 +167,31 @@ def handle_deactivate():
         
     except Exception as e:
         error_response(f"Deactivation failed: {str(e)}")
+
+
+def handle_detect_isp():
+    """ISS algılama - IP-API.com kullanarak"""
+    try:
+        result = isp_detector.detect_isp()
+        
+        if result["success"]:
+            response = {
+                "success": True,
+                "isp": result["isp"],
+                "normalized_isp": result["normalized_isp"],
+                "country": result.get("country"),
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            response = {
+                "success": False,
+                "error": result.get("error", "Unknown error")
+            }
+        
+        print(json.dumps(response))
+        
+    except Exception as e:
+        error_response(f"ISP detection failed: {str(e)}")
 
 
 def handle_check_and_restore():
