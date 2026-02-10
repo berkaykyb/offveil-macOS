@@ -15,30 +15,55 @@ class EngineService {
     }
     
     func executeCommand(_ command: String) async -> Result<[String: Any], Error> {
+        guard !enginePath.isEmpty, FileManager.default.fileExists(atPath: enginePath) else {
+            return .failure(
+                NSError(
+                    domain: "EngineService",
+                    code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: "Engine script not found at \(enginePath)"]
+                )
+            )
+        }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         process.arguments = [enginePath, command]
         
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
         
         do {
-            print("Engine path:", enginePath)
-            print("Command:", command)
-            
             try process.run()
             process.waitUntilExit()
             
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
-            
-            print("Raw output:", output)
-            
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+
+            let stdout = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let stderr = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+            if process.terminationStatus != 0 {
+                return .failure(
+                    NSError(
+                        domain: "EngineService",
+                        code: Int(process.terminationStatus),
+                        userInfo: [NSLocalizedDescriptionKey: "Engine exited with code \(process.terminationStatus). \(stderr)"]
+                    )
+                )
+            }
+
+            if let json = try? JSONSerialization.jsonObject(with: Data(stdout.utf8)) as? [String: Any] {
                 return .success(json)
             } else {
-                return .failure(NSError(domain: "EngineService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON: \(output)"]))
+                return .failure(
+                    NSError(
+                        domain: "EngineService",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Invalid JSON. stdout: \(stdout) stderr: \(stderr)"]
+                    )
+                )
             }
         } catch {
             return .failure(error)

@@ -36,9 +36,13 @@ def main():
 
 def handle_status():
     """Mevcut durum bilgisi döndür"""
+    is_active = state_manager.is_active()
+    state = state_manager.load_state() if is_active else None
+
     response = {
         "success": True,
-        "status": "inactive",
+        "status": "active" if is_active else "inactive",
+        "interface": state.get("active_interface") if state else None,
         "timestamp": datetime.now().isoformat()
     }
     print(json.dumps(response))
@@ -146,9 +150,10 @@ def handle_deactivate():
             success = dns_manager.set_dns_servers(interface, original_dns)
         
         if not success:
-            print(f"Warning: Failed to restore DNS for {interface}")
-        
-        # State'i temizle
+            error_response(f"Failed to restore DNS for {interface}")
+            return
+
+        # State'i sadece başarıda temizle
         state_manager.clear_state()
         
         response = {
@@ -225,7 +230,7 @@ def handle_check_and_restore():
         
         # Max 3 deneme yap
         if attempts >= 3:
-            print(f"Warning: Restore failed after {attempts} attempts, giving up")
+            print(f"Warning: Restore failed after {attempts} attempts, giving up", file=sys.stderr)
             state_manager.clear_state()
             error_response(f"Restore failed after {attempts} attempts")
             return
@@ -238,7 +243,7 @@ def handle_check_and_restore():
             else:
                 success = dns_manager.set_dns_servers(interface, original_dns)
         except Exception as e:
-            print(f"DNS restore error: {e}")
+            print(f"DNS restore error: {e}", file=sys.stderr)
             success = False
         
         if success:

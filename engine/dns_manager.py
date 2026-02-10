@@ -57,8 +57,7 @@ def get_active_interfaces():
         
         return interfaces
     
-    except subprocess.CalledProcessError as e:
-        print(f"Error getting interfaces: {e}")
+    except subprocess.CalledProcessError:
         return []
 
 
@@ -83,8 +82,7 @@ def get_dns_servers(interface):
         
         return dns_servers
     
-    except subprocess.CalledProcessError as e:
-        print(f"Error getting DNS for {interface}: {e}")
+    except subprocess.CalledProcessError:
         return []
 
 
@@ -107,7 +105,7 @@ def set_dns_servers(interface, dns_servers):
         # DNS sunucularını boşlukla ayırarak komut oluştur
         cmd = ["networksetup", "-setdnsservers", interface] + dns_servers
         
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             capture_output=True,
             text=True,
@@ -116,15 +114,14 @@ def set_dns_servers(interface, dns_servers):
         
         return True
     
-    except subprocess.CalledProcessError as e:
-        print(f"Error setting DNS for {interface}: {e}")
+    except subprocess.CalledProcessError:
         return False
 
 
 def clear_dns_servers(interface):
     """Belirtilen interface için DNS sunucularını temizle (DHCP'ye dön)""" 
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["networksetup", "-setdnsservers", interface, "empty"],
             capture_output=True,
             text=True,
@@ -133,8 +130,7 @@ def clear_dns_servers(interface):
         
         return True
     
-    except subprocess.CalledProcessError as e:
-        print(f"Error clearing DNS for {interface}: {e}")
+    except subprocess.CalledProcessError:
         return False
 
 
@@ -162,8 +158,7 @@ def get_current_dns():
         
         return dns_servers
     
-    except subprocess.CalledProcessError as e:
-        print(f"Error getting current DNS: {e}")
+    except subprocess.CalledProcessError:
         return []
 
 

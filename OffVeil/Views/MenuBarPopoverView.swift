@@ -9,6 +9,8 @@ import SwiftUI
 
 struct MenuBarPopoverView: View {
     @State private var isActive = false
+    @State private var isProcessing = false
+    @State private var errorMessage: String?
     @State private var showSettings = false
     @StateObject private var ispManager = ISPManager.shared
     
@@ -29,6 +31,9 @@ struct MenuBarPopoverView: View {
         .animation(.easeInOut(duration: 0.3), value: showSettings)
         .onAppear {
             ispManager.detectISP()
+            Task {
+                await refreshStatus()
+            }
         }
     }
     
@@ -69,38 +74,64 @@ struct MenuBarPopoverView: View {
             // Power Button
             PowerButton(isActive: $isActive) {
                 Task {
+                    isProcessing = true
+                    errorMessage = nil
+                    defer { isProcessing = false }
+
                     if isActive {
                         let result = await EngineService.shared.executeCommand("deactivate")
                         switch result {
                         case .success(let data):
-                            print("Deactivated:", data)
-                            isActive = false
+                            if data["success"] as? Bool == true {
+                                isActive = false
+                            } else {
+                                errorMessage = (data["error"] as? String) ?? "Kapatma başarısız"
+                            }
                         case .failure(let error):
-                            print("Deactivation Error:", error)
+                            errorMessage = error.localizedDescription
                         }
                     } else {
                         let result = await EngineService.shared.executeCommand("activate")
                         switch result {
                         case .success(let data):
-                            print("Activated:", data)
-                            isActive = true
+                            if data["success"] as? Bool == true {
+                                isActive = true
+                            } else {
+                                errorMessage = (data["error"] as? String) ?? "Aktivasyon başarısız"
+                            }
                         case .failure(let error):
-                            print("Activation Error:", error)
+                            errorMessage = error.localizedDescription
                         }
                     }
                 }
             }
+            .disabled(isProcessing)
             
             // Durum yazısı
             Text(isActive ? "Aktif" : "Kapalı")
                 .font(.title2)
                 .foregroundColor(isActive ? .green : .secondary)
                 .animation(.easeInOut, value: isActive)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
             
             Spacer()
         }
         .frame(width: 300, height: 400)
         .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private func refreshStatus() async {
+        let result = await EngineService.shared.getStatus()
+        guard case .success(let data) = result else { return }
+        guard data["success"] as? Bool == true else { return }
+        isActive = (data["status"] as? String) == "active"
     }
 }
 
