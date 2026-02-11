@@ -1,8 +1,48 @@
 import urllib.request
 import json
+import os
+import time
+
+
+CACHE_FILE = os.path.expanduser("~/.offveil_isp_cache.json")
+CACHE_TTL_SECONDS = 6 * 60 * 60
+
+
+def _read_cache(max_age_seconds):
+    try:
+        if not os.path.exists(CACHE_FILE):
+            return None
+        with open(CACHE_FILE, "r") as f:
+            payload = json.load(f)
+        timestamp = payload.get("timestamp")
+        data = payload.get("data")
+        if not isinstance(timestamp, (int, float)) or not isinstance(data, dict):
+            return None
+        if max_age_seconds is not None and (time.time() - timestamp) > max_age_seconds:
+            return None
+        return data
+    except Exception:
+        return None
+
+
+def _write_cache(data):
+    try:
+        payload = {
+            "timestamp": time.time(),
+            "data": data,
+        }
+        with open(CACHE_FILE, "w") as f:
+            json.dump(payload, f)
+    except Exception:
+        pass
 
 
 def detect_isp():
+    cached = _read_cache(CACHE_TTL_SECONDS)
+    if cached:
+        cached["source"] = "cache"
+        return cached
+
     try:
         # IP-API.com kullan (günde 45 istek limiti var ama cache yapacağız)
         url = "http://ip-api.com/json/?fields=status,country,isp,as,org,query"
@@ -12,15 +52,18 @@ def detect_isp():
             
             if data.get('status') == 'success':
                 isp_raw = data.get('isp', 'Unknown')
-                return {
+                result = {
                     'success': True,
                     'ip': data.get('query', 'Unknown'),
                     'isp': isp_raw,
                     'normalized_isp': normalize_isp_name(isp_raw),
                     'org': data.get('org', 'Unknown'),
                     'asn': data.get('as', 'Unknown'),
-                    'country': data.get('country', 'Unknown')
+                    'country': data.get('country', 'Unknown'),
+                    'source': 'api',
                 }
+                _write_cache(result)
+                return result
             else:
                 return {
                     'success': False,
@@ -28,12 +71,22 @@ def detect_isp():
                 }
     
     except urllib.error.URLError as e:
+        stale_cache = _read_cache(None)
+        if stale_cache:
+            stale_cache["source"] = "stale_cache"
+            stale_cache["cache_warning"] = f'Network error: {str(e)}'
+            return stale_cache
         return {
             'success': False,
             'error': f'Network error: {str(e)}'
         }
     
     except Exception as e:
+        stale_cache = _read_cache(None)
+        if stale_cache:
+            stale_cache["source"] = "stale_cache"
+            stale_cache["cache_warning"] = f'Detection failed: {str(e)}'
+            return stale_cache
         return {
             'success': False,
             'error': f'Detection failed: {str(e)}'

@@ -5,12 +5,33 @@ Komut alan ve JSON döndüren basit motor
 
 import sys
 import json
+import os
 from datetime import datetime
 import dns_manager
 import state_manager
 import isp_detector
 import proxy_manager
 import access_manager
+
+
+DEFAULT_ACCESS_PROFILE = {
+    "id": "default",
+    "dns_mode": "https",
+    "dns_qtype": "ipv4",
+    "timeout_ms": 5000,
+    "doh_url": "https://cloudflare-dns.com/dns-query",
+}
+
+# Tek tuş akışında kullanıcıya mod göstermeden ISP'ye göre ayar seçimi.
+ISP_PROFILE_RULES = [
+    ("superonline", {"id": "superonline", "timeout_ms": 7000}),
+    ("turk telekom", {"id": "turk_telekom", "timeout_ms": 5500}),
+    ("ttnet", {"id": "turk_telekom", "timeout_ms": 5500}),
+    ("turksat", {"id": "turksat", "timeout_ms": 6500}),
+    ("vodafone", {"id": "vodafone", "timeout_ms": 4500}),
+    ("turkcell", {"id": "turkcell", "timeout_ms": 5000}),
+    ("turknet", {"id": "turknet", "timeout_ms": 4000}),
+]
 
 
 def main():
@@ -45,6 +66,71 @@ def _resolve_mode(state):
     return "dns"
 
 
+def _normalize_isp_key(value):
+    if not value:
+        return ""
+    normalized = str(value).strip().lower()
+    translation = str.maketrans({
+        "ç": "c",
+        "ğ": "g",
+        "ı": "i",
+        "ö": "o",
+        "ş": "s",
+        "ü": "u",
+    })
+    normalized = normalized.translate(translation)
+    return " ".join(normalized.split())
+
+
+def _resolve_access_profile():
+    profile = dict(DEFAULT_ACCESS_PROFILE)
+    isp_details = {
+        "detected_isp": None,
+        "normalized_isp": None,
+        "profile_id": profile["id"],
+        "detection_error": None,
+    }
+
+    try:
+        forced_profile_id = os.getenv("OFFVEIL_FORCE_PROFILE", "").strip().lower()
+        forced_isp = os.getenv("OFFVEIL_FORCE_ISP", "").strip()
+
+        if forced_isp:
+            detected_isp = forced_isp
+            normalized_isp = isp_detector.normalize_isp_name(forced_isp)
+            isp_details["detection_error"] = "forced_isp_override"
+        else:
+            result = isp_detector.detect_isp()
+            if not result.get("success"):
+                isp_details["detection_error"] = result.get("error", "ISP detection failed")
+                return profile, isp_details
+            detected_isp = result.get("isp")
+            normalized_isp = result.get("normalized_isp") or detected_isp
+
+        normalized_key = _normalize_isp_key(normalized_isp)
+        raw_key = _normalize_isp_key(detected_isp)
+        matched_profile = None
+
+        if forced_profile_id:
+            matched_profile = {"id": forced_profile_id}
+        else:
+            for needle, candidate_profile in ISP_PROFILE_RULES:
+                if needle in normalized_key or needle in raw_key:
+                    matched_profile = candidate_profile
+                    break
+
+        if matched_profile:
+            profile.update(matched_profile)
+
+        isp_details["detected_isp"] = detected_isp
+        isp_details["normalized_isp"] = normalized_isp
+        isp_details["profile_id"] = profile["id"]
+        return profile, isp_details
+    except Exception as e:
+        isp_details["detection_error"] = str(e)
+        return profile, isp_details
+
+
 def handle_status():
     """Mevcut durum bilgisi döndür"""
     is_active = state_manager.is_active()
@@ -55,6 +141,7 @@ def handle_status():
         "status": "active" if is_active else "inactive",
         "interface": state.get("active_interface") if state else None,
         "mode": _resolve_mode(state),
+        "isp_profile_id": state.get("isp_profile_id") if state else None,
         "timestamp": datetime.now().isoformat()
     }
     print(json.dumps(response))
@@ -67,9 +154,10 @@ def _activate_access_mode():
         if not primary_service:
             return False, "No active network service found"
 
+        selected_profile, isp_details = _resolve_access_profile()
         original_proxy_state = proxy_manager.capture_proxy_state(primary_service)
 
-        start_result = access_manager.start_access_process()
+        start_result = access_manager.start_access_process(profile=selected_profile)
         if not start_result["success"]:
             error = start_result.get("error", "Failed to start access process")
             log_tail = start_result.get("log_tail")
@@ -82,6 +170,7 @@ def _activate_access_mode():
         proxy_port = start_result["port"]
         proxy_pid = start_result["pid"]
         proxy_log_path = start_result.get("log_path")
+        runtime_profile = start_result.get("runtime_profile", {})
 
         proxy_success = proxy_manager.set_system_proxy(primary_service, proxy_host, proxy_port)
         if not proxy_success:
@@ -93,6 +182,10 @@ def _activate_access_mode():
             "mode": "access",
             "active_interface": primary_service,
             "original_proxy_state": original_proxy_state,
+            "isp_profile_id": runtime_profile.get("profile_id", selected_profile["id"]),
+            "isp_detected": isp_details.get("detected_isp"),
+            "isp_detection_error": isp_details.get("detection_error"),
+            "access_runtime_profile": runtime_profile,
             "proxy_host": proxy_host,
             "proxy_port": proxy_port,
             "access_pid": proxy_pid,
@@ -108,6 +201,9 @@ def _activate_access_mode():
             "status": "active",
             "mode": "access",
             "interface": primary_service,
+            "isp_profile_id": runtime_profile.get("profile_id", selected_profile["id"]),
+            "isp_detected": isp_details.get("detected_isp"),
+            "isp_detection_error": isp_details.get("detection_error"),
             "proxy_host": proxy_host,
             "proxy_port": proxy_port,
             "access_pid": proxy_pid,

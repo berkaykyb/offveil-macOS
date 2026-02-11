@@ -12,6 +12,7 @@ DEFAULT_DOH_URL = "https://cloudflare-dns.com/dns-query"
 DEFAULT_DNS_MODE = "https"
 DEFAULT_TIMEOUT_MS = 5000
 DEFAULT_DNS_QTYPE = "ipv4"
+ALLOWED_DNS_MODES = {"udp", "https", "system"}
 
 
 def _get_int_env(name, default_value):
@@ -63,25 +64,85 @@ def find_access_binary():
     return None
 
 
-def _build_command(host, port):
-    custom_command = os.getenv("OFFVEIL_ACCESS_COMMAND")
-    if custom_command:
-        return shlex.split(custom_command.format(host=host, port=port))
-
-    binary = find_access_binary()
-    if not binary:
+def _get_profile_value(profile, key):
+    if not profile:
         return None
+    value = profile.get(key)
+    if isinstance(value, str):
+        value = value.strip()
+    return value if value not in (None, "") else None
 
-    dns_mode = os.getenv("OFFVEIL_ACCESS_DNS_MODE", DEFAULT_DNS_MODE).strip().lower()
-    # Keep backward compatibility with previous mode names.
+
+def _resolve_dns_mode(profile):
+    value = _get_profile_value(profile, "dns_mode")
+    if value is None:
+        value = os.getenv("OFFVEIL_ACCESS_DNS_MODE", DEFAULT_DNS_MODE)
+
+    dns_mode = str(value).strip().lower()
     dns_mode_aliases = {
         "sys": "system",
         "doh": "https",
     }
     dns_mode = dns_mode_aliases.get(dns_mode, dns_mode)
-    doh_url = os.getenv("OFFVEIL_ACCESS_DOH_URL", DEFAULT_DOH_URL)
-    timeout_ms = str(_get_int_env("OFFVEIL_ACCESS_TIMEOUT_MS", DEFAULT_TIMEOUT_MS))
-    dns_qtype = os.getenv("OFFVEIL_ACCESS_DNS_QTYPE", DEFAULT_DNS_QTYPE).strip().lower()
+    if dns_mode not in ALLOWED_DNS_MODES:
+        return DEFAULT_DNS_MODE
+    return dns_mode
+
+
+def _resolve_timeout_ms(profile):
+    value = _get_profile_value(profile, "timeout_ms")
+    if value is None:
+        return _get_int_env("OFFVEIL_ACCESS_TIMEOUT_MS", DEFAULT_TIMEOUT_MS)
+
+    try:
+        timeout_value = int(value)
+        return timeout_value if timeout_value > 0 else DEFAULT_TIMEOUT_MS
+    except Exception:
+        return DEFAULT_TIMEOUT_MS
+
+
+def _resolve_dns_qtype(profile):
+    value = _get_profile_value(profile, "dns_qtype")
+    if value is None:
+        value = os.getenv("OFFVEIL_ACCESS_DNS_QTYPE", DEFAULT_DNS_QTYPE)
+    return str(value).strip().lower()
+
+
+def _resolve_doh_url(profile):
+    value = _get_profile_value(profile, "doh_url")
+    if value is None:
+        value = os.getenv("OFFVEIL_ACCESS_DOH_URL", DEFAULT_DOH_URL)
+    return str(value).strip()
+
+
+def _build_runtime_profile(profile):
+    dns_mode = _resolve_dns_mode(profile)
+    timeout_ms = _resolve_timeout_ms(profile)
+    dns_qtype = _resolve_dns_qtype(profile)
+    doh_url = _resolve_doh_url(profile)
+    return {
+        "dns_mode": dns_mode,
+        "timeout_ms": timeout_ms,
+        "dns_qtype": dns_qtype,
+        "doh_url": doh_url,
+        "profile_id": _get_profile_value(profile, "id") or "default",
+    }
+
+
+def _build_command(host, port, profile=None):
+    custom_command = os.getenv("OFFVEIL_ACCESS_COMMAND")
+    if custom_command:
+        return shlex.split(custom_command.format(host=host, port=port)), _build_runtime_profile(profile)
+
+    binary = find_access_binary()
+    if not binary:
+        return None, None
+
+    runtime_profile = _build_runtime_profile(profile)
+    dns_mode = runtime_profile["dns_mode"]
+    timeout_ms = str(runtime_profile["timeout_ms"])
+    dns_qtype = runtime_profile["dns_qtype"]
+    doh_url = runtime_profile["doh_url"]
 
     # Tuned defaults for faster app/site open with one-click usage.
     command = [
@@ -101,7 +162,7 @@ def _build_command(host, port):
     if dns_mode == "https":
         command.extend(["--dns-https-url", doh_url])
 
-    return command
+    return command, runtime_profile
 
 
 def _tail_text(path, max_chars=800):
@@ -112,11 +173,11 @@ def _tail_text(path, max_chars=800):
         return ""
 
 
-def start_access_process(host=None, port=None):
+def start_access_process(host=None, port=None, profile=None):
     host = host or get_default_host()
     port = port or get_default_port()
 
-    command = _build_command(host, port)
+    command, runtime_profile = _build_command(host, port, profile)
     if not command:
         return {
             "success": False,
@@ -151,6 +212,7 @@ def start_access_process(host=None, port=None):
             "host": host,
             "port": port,
             "command": command,
+            "runtime_profile": runtime_profile,
             "log_path": log_path,
         }
     except Exception as e:
