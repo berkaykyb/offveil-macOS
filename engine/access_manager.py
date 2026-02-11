@@ -1,6 +1,7 @@
 import os
 import shlex
 import signal
+import socket
 import subprocess
 import time
 from pathlib import Path
@@ -12,6 +13,7 @@ DEFAULT_DOH_URL = "https://cloudflare-dns.com/dns-query"
 DEFAULT_DNS_MODE = "https"
 DEFAULT_TIMEOUT_MS = 5000
 DEFAULT_DNS_QTYPE = "ipv4"
+DEFAULT_READY_TIMEOUT_MS = 5000
 ALLOWED_DNS_MODES = {"udp", "https", "system"}
 
 
@@ -173,6 +175,25 @@ def _tail_text(path, max_chars=800):
         return ""
 
 
+def _is_port_ready(host, port):
+    try:
+        with socket.create_connection((host, int(port)), timeout=0.2):
+            return True
+    except Exception:
+        return False
+
+
+def _wait_for_process_ready(process, host, port, ready_timeout_ms):
+    deadline = time.time() + (ready_timeout_ms / 1000.0)
+    while time.time() < deadline:
+        if process.poll() is not None:
+            return False, "Access process terminated right after start"
+        if _is_port_ready(host, port):
+            return True, None
+        time.sleep(0.1)
+    return False, f"Access process did not become ready within {ready_timeout_ms}ms"
+
+
 def start_access_process(host=None, port=None, profile=None):
     host = host or get_default_host()
     port = port or get_default_port()
@@ -183,6 +204,10 @@ def start_access_process(host=None, port=None, profile=None):
             "success": False,
             "error": "No access binary found. Set OFFVEIL_ACCESS_BINARY or OFFVEIL_ACCESS_COMMAND."
         }
+
+    ready_timeout_ms = _get_int_env("OFFVEIL_ACCESS_READY_TIMEOUT_MS", DEFAULT_READY_TIMEOUT_MS)
+    if ready_timeout_ms <= 0:
+        ready_timeout_ms = DEFAULT_READY_TIMEOUT_MS
 
     try:
         log_path = f"/tmp/offveil-access-{int(time.time() * 1000)}.log"
@@ -196,12 +221,13 @@ def start_access_process(host=None, port=None, profile=None):
         )
         log_file.close()
 
-        time.sleep(0.4)
-        if process.poll() is not None:
+        ready, reason = _wait_for_process_ready(process, host, port, ready_timeout_ms)
+        if not ready:
+            stop_access_process(process.pid)
             log_tail = _tail_text(log_path)
             return {
                 "success": False,
-                "error": "Access process terminated right after start",
+                "error": reason,
                 "log_path": log_path,
                 "log_tail": log_tail,
             }

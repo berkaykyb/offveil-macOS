@@ -1,4 +1,5 @@
 import subprocess
+import time
 
 
 def _run_networksetup(args):
@@ -31,6 +32,58 @@ def _parse_proxy_output(output):
                 info["port"] = 0
 
     return info
+
+
+def _get_single_proxy(interface, secure=False):
+    try:
+        command = "-getsecurewebproxy" if secure else "-getwebproxy"
+        result = _run_networksetup([command, interface])
+        return _parse_proxy_output(result.stdout)
+    except Exception:
+        return {
+            "enabled": False,
+            "server": "",
+            "port": 0,
+        }
+
+
+def get_system_proxy_state(interface):
+    return {
+        "web": _get_single_proxy(interface, secure=False),
+        "secure_web": _get_single_proxy(interface, secure=True),
+    }
+
+
+def _is_proxy_enabled_with_target(interface, proxy_host, proxy_port):
+    state = get_system_proxy_state(interface)
+    target_host = str(proxy_host).strip()
+    target_port = int(proxy_port)
+    web = state["web"]
+    secure = state["secure_web"]
+    return (
+        web.get("enabled") is True and
+        secure.get("enabled") is True and
+        web.get("server") == target_host and
+        secure.get("server") == target_host and
+        int(web.get("port", 0) or 0) == target_port and
+        int(secure.get("port", 0) or 0) == target_port
+    )
+
+
+def _is_proxy_disabled(interface):
+    state = get_system_proxy_state(interface)
+    web = state["web"]
+    secure = state["secure_web"]
+    return (web.get("enabled") is False) and (secure.get("enabled") is False)
+
+
+def _wait_until(predicate, timeout_ms=2500, interval_ms=100):
+    deadline = time.time() + (timeout_ms / 1000.0)
+    while time.time() < deadline:
+        if predicate():
+            return True
+        time.sleep(interval_ms / 1000.0)
+    return predicate()
 
 
 def get_proxy_bypass_domains(interface):
@@ -103,17 +156,23 @@ def set_system_proxy(interface, proxy_host, proxy_port):
         _run_networksetup([
             "-setwebproxy", interface, proxy_host, str(proxy_port)
         ])
+        _run_networksetup(["-setwebproxystate", interface, "on"])
 
         _run_networksetup([
             "-setsecurewebproxy", interface, proxy_host, str(proxy_port)
         ])
+        _run_networksetup(["-setsecurewebproxystate", interface, "on"])
 
         _run_networksetup([
             "-setproxybypassdomains", interface,
             '*.local', '169.254/16', '127.0.0.1', 'localhost'
         ])
 
-        return True
+        return _wait_until(
+            lambda: _is_proxy_enabled_with_target(interface, proxy_host, proxy_port),
+            timeout_ms=3000,
+            interval_ms=100,
+        )
     except Exception:
         return False
 
@@ -122,6 +181,10 @@ def clear_system_proxy(interface):
     try:
         _run_networksetup(["-setwebproxystate", interface, "off"])
         _run_networksetup(["-setsecurewebproxystate", interface, "off"])
-        return True
+        return _wait_until(
+            lambda: _is_proxy_disabled(interface),
+            timeout_ms=3000,
+            interval_ms=100,
+        )
     except Exception:
         return False
