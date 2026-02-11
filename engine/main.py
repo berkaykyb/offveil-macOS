@@ -25,6 +25,33 @@ DEFAULT_ACCESS_PROFILE = {
 # Tek tuş akışında kullanıcıya mod göstermeden ISP'ye göre ayar seçimi.
 ISP_PROFILE_RULES = [
     ("superonline", {"id": "superonline", "timeout_ms": 7000}),
+    (
+        "avea",
+        {
+            "id": "turk_telekom_mobile",
+            "timeout_ms": 8500,
+            "dns_qtype": "ipv4",
+            "doh_url": "https://dns.google/dns-query",
+        },
+    ),
+    (
+        "tt mobil",
+        {
+            "id": "turk_telekom_mobile",
+            "timeout_ms": 8500,
+            "dns_qtype": "ipv4",
+            "doh_url": "https://dns.google/dns-query",
+        },
+    ),
+    (
+        "turk telekom mobil",
+        {
+            "id": "turk_telekom_mobile",
+            "timeout_ms": 8500,
+            "dns_qtype": "ipv4",
+            "doh_url": "https://dns.google/dns-query",
+        },
+    ),
     ("turk telekom", {"id": "turk_telekom", "timeout_ms": 5500}),
     ("ttnet", {"id": "turk_telekom", "timeout_ms": 5500}),
     ("turksat", {"id": "turksat", "timeout_ms": 6500}),
@@ -87,6 +114,7 @@ def _resolve_access_profile():
     isp_details = {
         "detected_isp": None,
         "normalized_isp": None,
+        "source": None,
         "profile_id": profile["id"],
         "detection_error": None,
     }
@@ -94,28 +122,41 @@ def _resolve_access_profile():
     try:
         forced_profile_id = os.getenv("OFFVEIL_FORCE_PROFILE", "").strip().lower()
         forced_isp = os.getenv("OFFVEIL_FORCE_ISP", "").strip()
+        detected_org = None
+        detected_asn = None
 
         if forced_isp:
             detected_isp = forced_isp
             normalized_isp = isp_detector.normalize_isp_name(forced_isp)
+            isp_details["source"] = "forced"
             isp_details["detection_error"] = "forced_isp_override"
         else:
-            result = isp_detector.detect_isp()
+            result = isp_detector.detect_isp(force_refresh=True)
             if not result.get("success"):
                 isp_details["detection_error"] = result.get("error", "ISP detection failed")
                 return profile, isp_details
             detected_isp = result.get("isp")
             normalized_isp = result.get("normalized_isp") or detected_isp
+            detected_org = result.get("org")
+            detected_asn = result.get("asn")
+            isp_details["source"] = result.get("source")
 
         normalized_key = _normalize_isp_key(normalized_isp)
         raw_key = _normalize_isp_key(detected_isp)
+        org_key = _normalize_isp_key(detected_org)
+        asn_key = _normalize_isp_key(detected_asn)
         matched_profile = None
 
         if forced_profile_id:
             matched_profile = {"id": forced_profile_id}
         else:
             for needle, candidate_profile in ISP_PROFILE_RULES:
-                if needle in normalized_key or needle in raw_key:
+                if (
+                    needle in normalized_key
+                    or needle in raw_key
+                    or needle in org_key
+                    or needle in asn_key
+                ):
                     matched_profile = candidate_profile
                     break
 
@@ -184,6 +225,8 @@ def _activate_access_mode():
             "original_proxy_state": original_proxy_state,
             "isp_profile_id": runtime_profile.get("profile_id", selected_profile["id"]),
             "isp_detected": isp_details.get("detected_isp"),
+            "isp_normalized": isp_details.get("normalized_isp"),
+            "isp_source": isp_details.get("source"),
             "isp_detection_error": isp_details.get("detection_error"),
             "access_runtime_profile": runtime_profile,
             "proxy_host": proxy_host,
@@ -203,6 +246,8 @@ def _activate_access_mode():
             "interface": primary_service,
             "isp_profile_id": runtime_profile.get("profile_id", selected_profile["id"]),
             "isp_detected": isp_details.get("detected_isp"),
+            "isp_normalized": isp_details.get("normalized_isp"),
+            "isp_source": isp_details.get("source"),
             "isp_detection_error": isp_details.get("detection_error"),
             "proxy_host": proxy_host,
             "proxy_port": proxy_port,
@@ -342,7 +387,7 @@ def handle_deactivate():
 def handle_detect_isp():
     """ISS algılama - IP-API.com kullanarak"""
     try:
-        result = isp_detector.detect_isp()
+        result = isp_detector.detect_isp(force_refresh=True)
         
         if result["success"]:
             response = {

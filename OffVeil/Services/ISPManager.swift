@@ -8,21 +8,31 @@ class ISPManager: ObservableObject {
     
     private let cacheKey = "cached_isp_info"
     private let cacheTimestampKey = "cached_isp_timestamp"
+    private let refreshTimestampKey = "cached_isp_refresh_timestamp"
     private let cacheValidityDuration: TimeInterval = 6 * 60 * 60 // 6 saat
+    private let minRefreshInterval: TimeInterval = 2 * 60 // 2 dakika
     
     private init() {
         loadCachedISP()
     }
     
     func detectISP() {
-        // Cache'i kontrol et
+        if isDetecting {
+            return
+        }
+
+        // Cache'i ekranda hemen göster
         if let cachedISP = getCachedISP() {
             ispName = cachedISP
+        }
+
+        // Çok sık API çağrısı yapma
+        if !shouldRefreshFromNetwork() {
             return
         }
         
-        // Cache yoksa veya eski ise, API'den al
         isDetecting = true
+        markRefreshAttempt()
         
         Task {
             let result = await EngineService.shared.executeCommand("detect_isp")
@@ -62,6 +72,17 @@ class ISPManager: ObservableObject {
         UserDefaults.standard.set(isp, forKey: cacheKey)
         UserDefaults.standard.set(Date(), forKey: cacheTimestampKey)
     }
+
+    private func shouldRefreshFromNetwork() -> Bool {
+        guard let lastRefresh = UserDefaults.standard.object(forKey: refreshTimestampKey) as? Date else {
+            return true
+        }
+        return Date().timeIntervalSince(lastRefresh) >= minRefreshInterval
+    }
+
+    private func markRefreshAttempt() {
+        UserDefaults.standard.set(Date(), forKey: refreshTimestampKey)
+    }
     
     private func loadCachedISP() {
         if let cached = getCachedISP() {
@@ -72,6 +93,7 @@ class ISPManager: ObservableObject {
     func invalidateCache() {
         UserDefaults.standard.removeObject(forKey: cacheKey)
         UserDefaults.standard.removeObject(forKey: cacheTimestampKey)
+        UserDefaults.standard.removeObject(forKey: refreshTimestampKey)
         ispName = "Algılanıyor..."
     }
 }

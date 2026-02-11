@@ -96,6 +96,13 @@ struct MenuBarPopoverView: View {
                         case .success(let data):
                             if data["success"] as? Bool == true {
                                 isActive = true
+                                if let normalizedISP = data["isp_normalized"] as? String,
+                                   !normalizedISP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    ispManager.ispName = normalizedISP
+                                } else if let detectedISP = data["isp_detected"] as? String,
+                                          !detectedISP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    ispManager.ispName = detectedISP
+                                }
                             } else {
                                 errorMessage = (data["error"] as? String) ?? "Aktivasyon başarısız"
                             }

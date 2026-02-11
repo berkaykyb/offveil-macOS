@@ -37,11 +37,12 @@ def _write_cache(data):
         pass
 
 
-def detect_isp():
-    cached = _read_cache(CACHE_TTL_SECONDS)
-    if cached:
-        cached["source"] = "cache"
-        return cached
+def detect_isp(force_refresh=False):
+    if not force_refresh:
+        cached = _read_cache(CACHE_TTL_SECONDS)
+        if cached:
+            cached["source"] = "cache"
+            return cached
 
     try:
         # IP-API.com kullan (günde 45 istek limiti var ama cache yapacağız)
@@ -97,7 +98,13 @@ def normalize_isp_name(isp_name):
     isp_lower = isp_name.lower()
     
     # Türk ISS'leri
-    if 'turk telekom' in isp_lower or 'ttnet' in isp_lower:
+    if (
+        'turk telekom' in isp_lower
+        or 'ttnet' in isp_lower
+        or 'avea' in isp_lower
+        or 'tt mobil' in isp_lower
+        or 'turk telekom mobil' in isp_lower
+    ):
         return 'Türk Telekom'
     elif 'turksat' in isp_lower:
         return 'Türksat'

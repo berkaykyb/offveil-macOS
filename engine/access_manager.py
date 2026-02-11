@@ -14,6 +14,7 @@ DEFAULT_DNS_MODE = "https"
 DEFAULT_TIMEOUT_MS = 5000
 DEFAULT_DNS_QTYPE = "ipv4"
 DEFAULT_READY_TIMEOUT_MS = 5000
+DEFAULT_USE_TIMEOUT_FLAG = False
 ALLOWED_DNS_MODES = {"udp", "https", "system"}
 
 
@@ -26,6 +27,14 @@ def _get_int_env(name, default_value):
         return int(value)
     except ValueError:
         return default_value
+
+
+def _get_bool_env(name, default_value):
+    value = os.getenv(name)
+    if value is None:
+        return default_value
+    value = value.strip().lower()
+    return value in ("1", "true", "yes", "on")
 
 
 def get_default_host():
@@ -125,6 +134,7 @@ def _build_runtime_profile(profile):
     return {
         "dns_mode": dns_mode,
         "timeout_ms": timeout_ms,
+        "use_timeout_flag": _get_bool_env("OFFVEIL_USE_TIMEOUT_FLAG", DEFAULT_USE_TIMEOUT_FLAG),
         "dns_qtype": dns_qtype,
         "doh_url": doh_url,
         "profile_id": _get_profile_value(profile, "id") or "default",
@@ -143,6 +153,7 @@ def _build_command(host, port, profile=None):
     runtime_profile = _build_runtime_profile(profile)
     dns_mode = runtime_profile["dns_mode"]
     timeout_ms = str(runtime_profile["timeout_ms"])
+    use_timeout_flag = runtime_profile["use_timeout_flag"]
     dns_qtype = runtime_profile["dns_qtype"]
     doh_url = runtime_profile["doh_url"]
 
@@ -156,10 +167,12 @@ def _build_command(host, port, profile=None):
         dns_mode,
         "--dns-qtype",
         dns_qtype,
-        "--timeout",
-        timeout_ms,
         "--dns-cache",
     ]
+
+    # SpoofDPI v1.2.1 on macOS may misread timeout values; keep disabled by default.
+    if use_timeout_flag and int(runtime_profile["timeout_ms"]) > 0:
+        command.extend(["--timeout", timeout_ms])
 
     if dns_mode == "https":
         command.extend(["--dns-https-url", doh_url])
