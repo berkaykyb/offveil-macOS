@@ -14,7 +14,7 @@ class EngineService {
         }
     }
     
-    func executeCommand(_ command: String) async -> Result<[String: Any], Error> {
+    func executeCommandSync(_ command: String) -> Result<[String: Any], Error> {
         guard !enginePath.isEmpty, FileManager.default.fileExists(atPath: enginePath) else {
             return .failure(
                 NSError(
@@ -68,6 +68,10 @@ class EngineService {
         } catch {
             return .failure(error)
         }
+    }
+
+    func executeCommand(_ command: String) async -> Result<[String: Any], Error> {
+        return executeCommandSync(command)
     }
     
     func getStatus() async -> Result<[String: Any], Error> {

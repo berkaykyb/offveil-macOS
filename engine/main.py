@@ -67,6 +67,8 @@ def _activate_access_mode():
         if not primary_service:
             return False, "No active network service found"
 
+        original_proxy_state = proxy_manager.capture_proxy_state(primary_service)
+
         start_result = access_manager.start_access_process()
         if not start_result["success"]:
             error = start_result.get("error", "Failed to start access process")
@@ -90,6 +92,7 @@ def _activate_access_mode():
             "active": True,
             "mode": "access",
             "active_interface": primary_service,
+            "original_proxy_state": original_proxy_state,
             "proxy_host": proxy_host,
             "proxy_port": proxy_port,
             "access_pid": proxy_pid,
@@ -166,13 +169,16 @@ def _deactivate_dns_mode(state):
 def _deactivate_access_mode(state):
     interface = state.get("active_interface")
     access_pid = state.get("access_pid")
+    original_proxy_state = state.get("original_proxy_state")
+    original_dns = state.get("original_dns", [])
+    was_dhcp = state.get("was_dhcp", False)
 
     if not interface and not access_pid:
         return False, "No access mode state found"
 
     proxy_cleared = True
     if interface:
-        proxy_cleared = proxy_manager.clear_system_proxy(interface)
+        proxy_cleared = proxy_manager.restore_proxy_state(interface, original_proxy_state)
 
     process_stopped = True
     if access_pid:
@@ -184,6 +190,17 @@ def _deactivate_access_mode(state):
     if not process_stopped:
         return False, f"Failed to stop access process pid={access_pid}"
 
+    # Legacy compatibility: older builds could also change DNS.
+    dns_restored = True
+    if interface and (was_dhcp or len(original_dns) > 0):
+        if was_dhcp or len(original_dns) == 0:
+            dns_restored = dns_manager.clear_dns_servers(interface)
+        else:
+            dns_restored = dns_manager.set_dns_servers(interface, original_dns)
+
+    if not dns_restored:
+        return False, f"Failed to restore DNS for {interface}"
+
     response = {
         "success": True,
         "message": "Deactivated successfully",
@@ -191,6 +208,7 @@ def _deactivate_access_mode(state):
         "mode": "access",
         "interface": interface,
         "proxy_cleared": proxy_cleared,
+        "dns_restored": dns_restored,
         "process_stopped": process_stopped,
         "timestamp": datetime.now().isoformat()
     }
@@ -251,7 +269,7 @@ def handle_detect_isp():
 
 
 def handle_check_and_restore():
-    """Fail-safe: Uygulama başlangıcında state kontrol et, gerekirse DNS'i geri yükle"""
+    """Fail-safe: Uygulama başlangıcında state kontrol et, gerekirse ayarları geri yükle"""
     try:
         if not state_manager.is_active():
             response = {
@@ -297,12 +315,22 @@ def handle_check_and_restore():
             error_response(f"Restore failed after {attempts} attempts")
             return
         
-        # DNS'i geri yükle
+        # Ayarları geri yükle
         success = True
         try:
             if mode == "access":
                 if interface:
-                    success = proxy_manager.clear_system_proxy(interface) and success
+                    success = proxy_manager.restore_proxy_state(
+                        interface,
+                        state.get("original_proxy_state")
+                    ) and success
+                    original_dns = state.get("original_dns", [])
+                    was_dhcp = state.get("was_dhcp", False)
+                    if was_dhcp or len(original_dns) > 0:
+                        if was_dhcp or len(original_dns) == 0:
+                            success = dns_manager.clear_dns_servers(interface) and success
+                        else:
+                            success = dns_manager.set_dns_servers(interface, original_dns) and success
                 if access_pid:
                     success = access_manager.stop_access_process(access_pid) and success
             else:

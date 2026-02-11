@@ -12,7 +12,7 @@ struct OffVeilApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     init() {
-        // Fail-safe: Uygulama açıldığında orphaned state varsa DNS'i geri yükle
+        // Fail-safe: Uygulama açıldığında orphaned state varsa ayarları geri yükle
         Task.detached {
             await Self.performFailSafeCheck()
         }
@@ -29,7 +29,7 @@ struct OffVeilApp: App {
         switch result {
         case .success(let data):
             if let action = data["action"] as? String, action == "restored" {
-                print("Fail-safe: DNS restored from previous session")
+                print("Fail-safe: system settings restored from previous session")
             }
         case .failure(let error):
             print("Fail-safe check error:", error)

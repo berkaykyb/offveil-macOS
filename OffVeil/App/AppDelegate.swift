@@ -41,19 +41,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    func applicationWillTerminate(_ notification: Notification) {
-        // Uygulama kapanırken DNS'i geri yükle
-        Task {
-            await restoreDNSOnExit()
-        }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // Uygulama kapanmadan önce cleanup'ı senkron tamamla.
+        restoreSystemOnExit()
+        return .terminateNow
     }
     
-    private func restoreDNSOnExit() async {
-        let result = await EngineService.shared.executeCommand("check_and_restore")
-        switch result {
+    private func restoreSystemOnExit() {
+        // Önce normal kapatma komutunu dene.
+        _ = EngineService.shared.executeCommandSync("deactivate")
+
+        // Sonra orphaned state/proxy/process kaldıysa garanti cleanup yap.
+        let restoreResult = EngineService.shared.executeCommandSync("check_and_restore")
+        switch restoreResult {
         case .success(let data):
             if let action = data["action"] as? String, action == "restored" {
-                print("Exit cleanup: DNS restored successfully")
+                print("Exit cleanup: system settings restored")
             }
         case .failure(let error):
             print("Exit cleanup error:", error)
