@@ -1,10 +1,19 @@
 import subprocess
-import json
-import re
 
 
 def get_primary_service():
     """Aktif olarak internet bağlantısı sağlayan servis"""
+    service_result = None
+    try:
+        service_result = subprocess.run(
+            ["networksetup", "-listallhardwareports"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except subprocess.CalledProcessError:
+        service_result = None
+
     try:
         result = subprocess.run(
             ["route", "-n", "get", "default"],
@@ -12,30 +21,29 @@ def get_primary_service():
             text=True,
             check=True
         )
-        
+
+        interface_id = None
         for line in result.stdout.split('\n'):
             if 'interface:' in line:
-                interface_id = line.split(':')[1].strip()
-                
-                service_result = subprocess.run(
-                    ["networksetup", "-listallhardwareports"],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                
-                lines = service_result.stdout.split('\n')
-                for i, line in enumerate(lines):
-                    if f"Device: {interface_id}" in line:
-                        for j in range(i-1, max(0, i-5), -1):
-                            if "Hardware Port:" in lines[j]:
-                                service_name = lines[j].split(':')[1].strip()
-                                return service_name
-        
-        return None
-    
-    except:
-        return None
+                interface_id = line.split(':', 1)[1].strip()
+                break
+
+        if interface_id and service_result:
+            lines = service_result.stdout.split('\n')
+            for i, line in enumerate(lines):
+                if f"Device: {interface_id}" in line:
+                    for j in range(i - 1, max(0, i - 5), -1):
+                        if "Hardware Port:" in lines[j]:
+                            return lines[j].split(':', 1)[1].strip()
+    except subprocess.CalledProcessError:
+        pass
+
+    # Fallback: route ile tespit başarısızsa ilk aktif servisi kullan.
+    active_services = get_active_interfaces()
+    if active_services:
+        return active_services[0]
+
+    return None
 
 
 def get_active_interfaces():
@@ -59,44 +67,6 @@ def get_active_interfaces():
     
     except subprocess.CalledProcessError:
         return []
-
-
-def get_dns_servers(interface):
-    """Belirtilen interface için DNS sunucularını al"""
-    try:
-        result = subprocess.run(
-            ["networksetup", "-getdnsservers", interface],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        
-        output = result.stdout.strip()
-        
-        # Eğer "There aren't any DNS Servers" dönerse boş liste
-        if "aren't any" in output.lower():
-            return []
-        
-        # DNS sunucuları satır satır gelir
-        dns_servers = [line.strip() for line in output.split('\n') if line.strip()]
-        
-        return dns_servers
-    
-    except subprocess.CalledProcessError:
-        return []
-
-
-def get_all_dns():
-    """Tüm aktif interface'lerin DNS ayarlarını al"""
-    interfaces = get_active_interfaces()
-    
-    dns_config = {}
-    
-    for interface in interfaces:
-        dns_servers = get_dns_servers(interface)
-        dns_config[interface] = dns_servers
-    
-    return dns_config
 
 
 def set_dns_servers(interface, dns_servers):
@@ -132,46 +102,3 @@ def clear_dns_servers(interface):
     
     except subprocess.CalledProcessError:
         return False
-
-
-def get_current_dns():
-    """Gerçekte kullanılan DNS'i al (DHCP dahil)"""
-    try:
-        result = subprocess.run(
-            ["scutil", "--dns"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        
-        output = result.stdout
-        dns_servers = []
-        
-        # nameserver[0] : 8.8.8.8 formatını ara
-        for line in output.split('\n'):
-            if 'nameserver[0]' in line:
-                match = re.search(r':\s*([\d\.]+)', line)
-                if match:
-                    dns = match.group(1)
-                    if dns not in dns_servers:
-                        dns_servers.append(dns)
-        
-        return dns_servers
-    
-    except subprocess.CalledProcessError:
-        return []
-
-
-if __name__ == "__main__":
-    # Test
-    print("Active Interfaces:")
-    interfaces = get_active_interfaces()
-    print(json.dumps(interfaces, indent=2))
-    
-    print("\nAll DNS Configurations:")
-    dns_config = get_all_dns()
-    print(json.dumps(dns_config, indent=2))
-    
-    print("\nCurrent DNS (Including DHCP):")
-    current_dns = get_current_dns()
-    print(json.dumps(current_dns, indent=2))

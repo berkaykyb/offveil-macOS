@@ -10,3 +10,15 @@ __pycache__/
 .Python
 engine/__pycache__/
 engine/*.pyc
+
+# Local access binary / installer artifacts
+engine/bin/spoofdpi-*
+engine/bin/*.tar
+engine/bin/*.tar.gz
+engine/bin/*.zip
+scripts/install_access_binary.sh
+
+# Xcode user-specific files
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/

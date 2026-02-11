@@ -1,6 +1,5 @@
 import json
 import os
-from pathlib import Path
 
 STATE_FILE = os.path.expanduser("~/.offveil_state.json")
 

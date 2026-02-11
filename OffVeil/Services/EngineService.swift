@@ -73,8 +73,4 @@ class EngineService {
     func getStatus() async -> Result<[String: Any], Error> {
         return await executeCommand("status")
     }
-    
-    func getDNS() async -> Result<[String: Any], Error> {
-        return await executeCommand("get_dns")
-    }
 }
