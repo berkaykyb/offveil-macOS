@@ -35,6 +35,10 @@ struct MenuBarPopoverView: View {
                 await refreshStatus()
             }
         }
+        .onDisappear {
+            // Popover kapanınca ayarlar ekranında kalmasın.
+            showSettings = false
+        }
     }
     
     private var mainView: some View {

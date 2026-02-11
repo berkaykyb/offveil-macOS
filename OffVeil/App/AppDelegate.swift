@@ -8,9 +8,11 @@
 import AppKit
 import SwiftUI
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var globalEventMonitor: Any?
+    private var localEventMonitor: Any?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Menü bar item oluştur
@@ -26,7 +28,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover?.contentSize = NSSize(width: 300, height: 400)
         popover?.behavior = .transient
-        popover?.contentViewController = NSHostingController(rootView: MenuBarPopoverView())
+        popover?.delegate = self
+        refreshPopoverContent()
     }
     
     @objc func statusItemClicked() {
@@ -34,11 +37,67 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         if let popover = popover {
             if popover.isShown {
-                popover.performClose(nil)
+                closePopover()
             } else {
+                // Her açılışta içeriği yenile: ayarlar ekranında takılı kalmasın.
+                refreshPopoverContent()
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+                installEventMonitors()
             }
         }
+    }
+
+    private func refreshPopoverContent() {
+        popover?.contentViewController = NSHostingController(rootView: MenuBarPopoverView())
+    }
+
+    private func closePopover() {
+        popover?.performClose(nil)
+        removeEventMonitors()
+    }
+
+    private func installEventMonitors() {
+        removeEventMonitors()
+
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.closePopover()
+            }
+        }
+
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            guard let self = self else { return event }
+            guard let popover = self.popover, popover.isShown else { return event }
+            let popoverWindow = popover.contentViewController?.view.window
+
+            // Popover içindeki tıklamalarda kapanma istemiyoruz.
+            if event.window === popoverWindow {
+                return event
+            }
+
+            self.closePopover()
+            return event
+        }
+    }
+
+    private func removeEventMonitors() {
+        if let monitor = globalEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalEventMonitor = nil
+        }
+
+        if let monitor = localEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            localEventMonitor = nil
+        }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        removeEventMonitors()
     }
     
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
