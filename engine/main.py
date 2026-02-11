@@ -6,7 +6,10 @@ Komut alan ve JSON döndüren basit motor
 import sys
 import json
 import os
+import subprocess
+import uuid
 from datetime import datetime
+from pathlib import Path
 import dns_manager
 import state_manager
 import isp_detector
@@ -59,6 +62,40 @@ ISP_PROFILE_RULES = [
     ("turkcell", {"id": "turkcell", "timeout_ms": 5000}),
     ("turknet", {"id": "turknet", "timeout_ms": 4000}),
 ]
+
+
+def _resolve_owner_pid():
+    raw_owner_pid = os.getenv("OFFVEIL_OWNER_PID", "").strip()
+    if raw_owner_pid:
+        try:
+            owner_pid = int(raw_owner_pid)
+            if owner_pid > 1:
+                return owner_pid
+        except ValueError:
+            pass
+
+    fallback_pid = os.getppid()
+    return fallback_pid if fallback_pid > 1 else None
+
+
+def _start_exit_watchdog(owner_pid, watchdog_token):
+    if not owner_pid or not watchdog_token:
+        return None
+
+    try:
+        watchdog_script = Path(__file__).resolve().parent / "app_watchdog.py"
+        if not watchdog_script.exists():
+            return None
+
+        process = subprocess.Popen(
+            ["/usr/bin/python3", str(watchdog_script), str(owner_pid), watchdog_token],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return process.pid
+    except Exception:
+        return None
 
 
 def main():
@@ -212,6 +249,8 @@ def _activate_access_mode():
         proxy_pid = start_result["pid"]
         proxy_log_path = start_result.get("log_path")
         runtime_profile = start_result.get("runtime_profile", {})
+        owner_pid = _resolve_owner_pid()
+        watchdog_token = str(uuid.uuid4())
 
         proxy_success = proxy_manager.set_system_proxy(primary_service, proxy_host, proxy_port)
         if not proxy_success:
@@ -233,10 +272,17 @@ def _activate_access_mode():
             "proxy_port": proxy_port,
             "access_pid": proxy_pid,
             "access_log_path": proxy_log_path,
+            "owner_pid": owner_pid,
+            "watchdog_token": watchdog_token,
             "restore_attempts": 0,
             "timestamp": datetime.now().isoformat()
         }
         state_manager.save_state(state_data)
+
+        watchdog_pid = _start_exit_watchdog(owner_pid, watchdog_token)
+        if watchdog_pid:
+            state_data["watchdog_pid"] = watchdog_pid
+            state_manager.save_state(state_data)
         
         response = {
             "success": True,
@@ -253,6 +299,8 @@ def _activate_access_mode():
             "proxy_port": proxy_port,
             "access_pid": proxy_pid,
             "access_log_path": proxy_log_path,
+            "owner_pid": owner_pid,
+            "watchdog_pid": watchdog_pid,
             "timestamp": datetime.now().isoformat()
         }
         return True, response

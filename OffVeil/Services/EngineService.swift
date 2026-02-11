@@ -28,6 +28,9 @@ class EngineService {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         process.arguments = [enginePath, command]
+        var env = ProcessInfo.processInfo.environment
+        env["OFFVEIL_OWNER_PID"] = String(ProcessInfo.processInfo.processIdentifier)
+        process.environment = env
         
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
