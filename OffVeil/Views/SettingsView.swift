@@ -5,6 +5,7 @@ struct SettingsView: View {
     @ObservedObject private var settings = SettingsManager.shared
 
     @State private var screen: SettingsScreen = .main
+    @State private var pendingLanguage: AppLanguage = SettingsManager.shared.appLanguage
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,6 +34,9 @@ struct SettingsView: View {
         .frame(width: 320, height: 450)
         .background(SettingsGlassBackground())
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .onAppear {
+            pendingLanguage = settings.appLanguage
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(
@@ -63,7 +67,7 @@ struct SettingsView: View {
             }
             .buttonStyle(PlainButtonStyle())
 
-            Text(screen.title)
+            Text(screenTitle)
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundColor(.white.opacity(0.95))
 
@@ -74,10 +78,10 @@ struct SettingsView: View {
     private var settingsMainContent: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
-                SettingsSectionCard(title: "Startup") {
+                SettingsSectionCard(title: localized(.startupSection)) {
                     SettingsToggleRow(
-                        title: "Launch at Login",
-                        subtitle: "Start OffVeil when macOS starts",
+                        title: localized(.launchAtLoginTitle),
+                        subtitle: localized(.launchAtLoginSubtitle),
                         isOn: launchAtLoginBinding
                     )
 
@@ -86,8 +90,8 @@ struct SettingsView: View {
                             Divider().overlay(Color.white.opacity(0.08))
 
                             SettingsToggleRow(
-                                title: "Auto Active on Launch",
-                                subtitle: "Automatically enable protection on startup",
+                                title: localized(.autoActiveTitle),
+                                subtitle: localized(.autoActiveSubtitle),
                                 isOn: $settings.autoActivateOnLaunch,
                                 indented: true
                             )
@@ -95,8 +99,8 @@ struct SettingsView: View {
                             Divider().overlay(Color.white.opacity(0.08))
 
                             SettingsToggleRow(
-                                title: "Start Hidden",
-                                subtitle: "Open only in menu bar without interrupting",
+                                title: localized(.startHiddenTitle),
+                                subtitle: localized(.startHiddenSubtitle),
                                 isOn: $settings.startHiddenOnLaunch,
                                 indented: true
                             )
@@ -110,16 +114,18 @@ struct SettingsView: View {
                     }
                 }
 
-                SettingsSectionCard(title: "Language") {
+                SettingsSectionCard(title: localized(.languageSection)) {
                     LanguagePickerRow(
-                        selectedLanguage: $settings.appLanguage
+                        currentLanguage: settings.appLanguage,
+                        pendingLanguage: $pendingLanguage,
+                        applyAction: applyLanguageSelection
                     )
                 }
 
-                SettingsSectionCard(title: "Information") {
+                SettingsSectionCard(title: localized(.infoSection)) {
                     SettingsNavigationRow(
-                        title: "About",
-                        subtitle: "Version, credits and legal info"
+                        title: localized(.aboutRowTitle),
+                        subtitle: localized(.aboutRowSubtitle)
                     ) {
                         withAnimation(.easeInOut(duration: 0.22)) {
                             screen = .about
@@ -143,7 +149,7 @@ struct SettingsView: View {
 
     private var settingsAboutContent: some View {
         VStack(spacing: 12) {
-            SettingsSectionCard(title: "Application") {
+            SettingsSectionCard(title: localized(.applicationSection)) {
                 HStack(spacing: 12) {
                     AppMark()
 
@@ -151,7 +157,7 @@ struct SettingsView: View {
                         Text("OffVeil")
                             .font(.system(size: 17, weight: .bold, design: .rounded))
                             .foregroundColor(.white.opacity(0.95))
-                        Text("Secure Tunnel")
+                        Text(localized(.secureTunnel))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white.opacity(0.62))
                     }
@@ -163,17 +169,17 @@ struct SettingsView: View {
 
                 Divider().overlay(Color.white.opacity(0.08))
 
-                SettingsValueRow(title: "Version", value: appVersion)
+                SettingsValueRow(title: localized(.versionLabel), value: appVersion)
 
                 Divider().overlay(Color.white.opacity(0.08))
 
-                SettingsValueRow(title: "Build", value: appBuild)
+                SettingsValueRow(title: localized(.buildLabel), value: appBuild)
             }
 
-            SettingsSectionCard(title: "Legal") {
+            SettingsSectionCard(title: localized(.legalSection)) {
                 SettingsNavigationRow(
-                    title: "Open Source Licenses",
-                    subtitle: "Third-party components and licenses"
+                    title: localized(.openSourceRowTitle),
+                    subtitle: localized(.openSourceRowSubtitle)
                 ) {
                     withAnimation(.easeInOut(duration: 0.22)) {
                         screen = .licenses
@@ -187,13 +193,13 @@ struct SettingsView: View {
 
     private var settingsLicensesContent: some View {
         VStack(spacing: 10) {
-            SettingsSectionCard(title: "Open Source") {
+            SettingsSectionCard(title: localized(.openSourceSection)) {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("SpoofDPI")
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundColor(.white.opacity(0.95))
-                        Text("OffVeil uses SpoofDPI for access routing in current versions. License and attribution details will be listed here.")
+                        Text(localized(.spoofDpiBody))
                             .font(.system(size: 12, weight: .regular))
                             .foregroundColor(.white.opacity(0.70))
                             .fixedSize(horizontal: false, vertical: true)
@@ -225,23 +231,34 @@ struct SettingsView: View {
             screen = screen.parent ?? .main
         }
     }
+
+    private func applyLanguageSelection() {
+        guard pendingLanguage != settings.appLanguage else {
+            return
+        }
+        settings.appLanguage = pendingLanguage
+    }
+
+    private func localized(_ key: L10nKey) -> String {
+        AppLocalizer.text(key, language: settings.appLanguage)
+    }
+
+    private var screenTitle: String {
+        switch screen {
+        case .main:
+            return localized(.settingsTitle)
+        case .about:
+            return localized(.aboutTitle)
+        case .licenses:
+            return localized(.openSourceLicensesTitle)
+        }
+    }
 }
 
 private enum SettingsScreen {
     case main
     case about
     case licenses
-
-    var title: String {
-        switch self {
-        case .main:
-            return "Settings"
-        case .about:
-            return "About"
-        case .licenses:
-            return "Open Source Licenses"
-        }
-    }
 
     var parent: SettingsScreen? {
         switch self {
@@ -280,7 +297,6 @@ struct SettingsToggleRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .padding(.leading, indented ? 10 : 0)
         .background(
             indented
                 ? Color.white.opacity(0.03)
@@ -338,11 +354,13 @@ private struct SettingsValueRow: View {
 }
 
 private struct LanguagePickerRow: View {
-    @Binding var selectedLanguage: AppLanguage
+    let currentLanguage: AppLanguage
+    @Binding var pendingLanguage: AppLanguage
+    let applyAction: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("App Language")
+            Text(AppLocalizer.text(.appLanguageTitle, language: currentLanguage))
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundColor(.white.opacity(0.92))
                 .padding(.horizontal, 12)
@@ -350,16 +368,16 @@ private struct LanguagePickerRow: View {
 
             HStack(spacing: 8) {
                 ForEach(AppLanguage.allCases, id: \.rawValue) { language in
-                    Button(action: { selectedLanguage = language }) {
+                    Button(action: { pendingLanguage = language }) {
                         Text(language.rawValue.uppercased())
                             .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundColor(language == selectedLanguage ? Color.black.opacity(0.82) : .white.opacity(0.80))
+                            .foregroundColor(language == pendingLanguage ? Color.black.opacity(0.82) : .white.opacity(0.80))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                                     .fill(
-                                        language == selectedLanguage
+                                        language == pendingLanguage
                                             ? Color(red: 0.14, green: 0.88, blue: 0.68)
                                             : Color.white.opacity(0.08)
                                     )
@@ -369,8 +387,29 @@ private struct LanguagePickerRow: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 12)
+
+            if pendingLanguage != currentLanguage {
+                Button(action: applyAction) {
+                    Text(AppLocalizer.text(.applyLanguageButton, language: currentLanguage))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.black.opacity(0.86))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color(red: 0.14, green: 0.88, blue: 0.68))
+                        )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 12)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            Spacer(minLength: 0)
+                .frame(height: 4)
+                .padding(.bottom, 8)
         }
+        .animation(.easeInOut(duration: 0.2), value: pendingLanguage)
     }
 }
 

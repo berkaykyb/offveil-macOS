@@ -14,6 +14,7 @@ struct MenuBarPopoverView: View {
     @State private var errorMessage: String?
     @State private var showSettings = false
     @StateObject private var ispManager = ISPManager.shared
+    @ObservedObject private var settings = SettingsManager.shared
 
     private let updateURLString = "https://github.com/berkaykyb/offveil-macOS/releases"
     
@@ -55,7 +56,7 @@ struct MenuBarPopoverView: View {
             .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
-                Text(isActive ? "Protection Active" : "Protection Inactive")
+                Text(isActive ? localized(.protectionActive) : localized(.protectionInactive))
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(primaryTextColor)
                     .multilineTextAlignment(.center)
@@ -86,7 +87,7 @@ struct MenuBarPopoverView: View {
                         .frame(width: 7, height: 7)
                 }
                 .animation(.easeInOut(duration: 0.25), value: hasStatusError)
-                Text(ispManager.ispName)
+                Text(localizedISPName)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(primaryTextColor)
                     .opacity(ispManager.isDetecting ? 0.55 : 1.0)
@@ -133,7 +134,7 @@ struct MenuBarPopoverView: View {
                 Text("offveil")
                     .font(.system(size: 23, weight: .black, design: .rounded))
                     .foregroundColor(primaryTextColor)
-                Text("Secure Tunnel")
+                Text(localized(.secureTunnel))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(secondaryTextColor)
             }
@@ -161,7 +162,7 @@ struct MenuBarPopoverView: View {
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.counterclockwise.circle")
-                    Text("Clear All")
+                    Text(localized(.clearAll))
                 }
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(Color(red: 0.95, green: 0.42, blue: 0.42))
@@ -173,7 +174,7 @@ struct MenuBarPopoverView: View {
             Button(action: openUpdatesPage) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.down.app")
-                    Text("Check updates")
+                    Text(localized(.checkUpdates))
                 }
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(primaryTextColor.opacity(0.88))
@@ -206,6 +207,23 @@ struct MenuBarPopoverView: View {
         return Color(red: 0.11, green: 0.86, blue: 0.62)
     }
 
+    private var localizedISPName: String {
+        switch ispManager.ispName {
+        case "Detecting...":
+            return localized(.ispDetecting)
+        case "Unknown":
+            return localized(.ispUnknown)
+        case "Detection failed":
+            return localized(.ispDetectionFailed)
+        default:
+            return ispManager.ispName
+        }
+    }
+
+    private func localized(_ key: L10nKey) -> String {
+        AppLocalizer.text(key, language: settings.appLanguage)
+    }
+
     @MainActor
     private func toggleProtection() async {
         if isProcessing {
@@ -233,7 +251,7 @@ struct MenuBarPopoverView: View {
                     }
                 }
             } else {
-                errorMessage = (data["error"] as? String) ?? "Operation failed"
+                errorMessage = (data["error"] as? String) ?? localized(.operationFailed)
             }
         case .failure(let error):
             errorMessage = error.localizedDescription
@@ -258,7 +276,7 @@ struct MenuBarPopoverView: View {
         case .success(let data):
             let success = data["success"] as? Bool ?? false
             if !success {
-                errorMessage = (data["message"] as? String) ?? "Reset failed"
+                errorMessage = (data["message"] as? String) ?? localized(.resetFailed)
             }
         case .failure(let error):
             errorMessage = error.localizedDescription
