@@ -8,6 +8,20 @@
 import Foundation
 import ServiceManagement
 
+enum AppLanguage: String, CaseIterable {
+    case en
+    case tr
+
+    var title: String {
+        switch self {
+        case .en:
+            return "English"
+        case .tr:
+            return "Turkce"
+        }
+    }
+}
+
 class SettingsManager: ObservableObject {
     static let shared = SettingsManager()
     
@@ -15,25 +29,57 @@ class SettingsManager: ObservableObject {
     
     private enum Keys {
         static let launchAtLogin = "launchAtLogin"
-        static let showNotifications = "showNotifications"
+        static let autoActivateOnLaunch = "autoActivateOnLaunch"
+        static let startHiddenOnLaunch = "startHiddenOnLaunch"
+        static let appLanguage = "appLanguage"
     }
     
     @Published var launchAtLogin: Bool {
         didSet {
             defaults.set(launchAtLogin, forKey: Keys.launchAtLogin)
             updateLoginItem()
+
+            if !launchAtLogin {
+                autoActivateOnLaunch = false
+                startHiddenOnLaunch = false
+            }
         }
     }
     
-    @Published var showNotifications: Bool {
+    @Published var autoActivateOnLaunch: Bool {
         didSet {
-            defaults.set(showNotifications, forKey: Keys.showNotifications)
+            defaults.set(autoActivateOnLaunch, forKey: Keys.autoActivateOnLaunch)
+        }
+    }
+
+    @Published var startHiddenOnLaunch: Bool {
+        didSet {
+            defaults.set(startHiddenOnLaunch, forKey: Keys.startHiddenOnLaunch)
+        }
+    }
+
+    @Published var appLanguage: AppLanguage {
+        didSet {
+            defaults.set(appLanguage.rawValue, forKey: Keys.appLanguage)
         }
     }
     
     private init() {
         self.launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
-        self.showNotifications = defaults.bool(forKey: Keys.showNotifications)
+        self.autoActivateOnLaunch = defaults.bool(forKey: Keys.autoActivateOnLaunch)
+        self.startHiddenOnLaunch = defaults.bool(forKey: Keys.startHiddenOnLaunch)
+
+        if let savedLanguage = defaults.string(forKey: Keys.appLanguage),
+           let parsedLanguage = AppLanguage(rawValue: savedLanguage) {
+            self.appLanguage = parsedLanguage
+        } else {
+            self.appLanguage = .en
+        }
+
+        if !launchAtLogin {
+            autoActivateOnLaunch = false
+            startHiddenOnLaunch = false
+        }
     }
     
     private func updateLoginItem() {
