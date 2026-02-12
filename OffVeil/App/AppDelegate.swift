@@ -13,6 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var popover: NSPopover?
     private var globalEventMonitor: Any?
     private var localEventMonitor: Any?
+    private let settings = SettingsManager.shared
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Menü bar item oluştur
@@ -30,20 +31,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover?.behavior = .transient
         popover?.delegate = self
         refreshPopoverContent()
+
+        applyStartupPreferences()
     }
     
     @objc func statusItemClicked() {
-        guard let button = statusItem?.button else { return }
-        
-        if let popover = popover {
-            if popover.isShown {
-                closePopover()
-            } else {
-                // Her açılışta içeriği yenile: ayarlar ekranında takılı kalmasın.
-                refreshPopoverContent()
-                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-                installEventMonitors()
-            }
+        guard let popover = popover else { return }
+
+        if popover.isShown {
+            closePopover()
+        } else {
+            openPopover()
         }
     }
 
@@ -54,6 +52,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private func closePopover() {
         popover?.performClose(nil)
         removeEventMonitors()
+    }
+
+    private func openPopover() {
+        guard let button = statusItem?.button, let popover = popover else { return }
+        guard !popover.isShown else { return }
+
+        // Her açılışta içeriği yenile: ayarlar ekranında takılı kalmasın.
+        refreshPopoverContent()
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        installEventMonitors()
     }
 
     private func installEventMonitors() {
@@ -120,5 +128,42 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case .failure(let error):
             print("Exit cleanup error:", error)
         }
+    }
+
+    private func applyStartupPreferences() {
+        guard settings.launchAtLogin else {
+            return
+        }
+
+        Task.detached { [weak self] in
+            guard let self = self else { return }
+
+            if self.settings.autoActivateOnLaunch {
+                await self.activateProtectionIfNeeded()
+            }
+
+            guard !self.settings.startHiddenOnLaunch else {
+                return
+            }
+
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            await MainActor.run {
+                self.openPopover()
+            }
+        }
+    }
+
+    private func activateProtectionIfNeeded() async {
+        let statusResult = await EngineService.shared.getStatus()
+        guard case .success(let statusData) = statusResult else {
+            return
+        }
+
+        let isActive = (statusData["status"] as? String) == "active"
+        if isActive {
+            return
+        }
+
+        _ = await EngineService.shared.executeCommand("activate")
     }
 }
