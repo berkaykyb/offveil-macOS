@@ -26,7 +26,7 @@ struct SettingsView: View {
                 
                 Spacer()
                 
-                Text("Ayarlar")
+                Text("Settings")
                     .font(.headline)
                 
                 Spacer()
@@ -43,7 +43,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Başlangıçta Başlat
                 SettingsToggleRow(
-                    title: "Başlangıçta Başlat",
+                    title: "Launch at Login",
                     isOn: $settings.launchAtLogin
                 )
                 
@@ -52,19 +52,19 @@ struct SettingsView: View {
                 
                 // Bildirimler
                 SettingsToggleRow(
-                    title: "Bildirimler",
+                    title: "Notifications",
                     isOn: $settings.showNotifications
                 )
                 
                 Divider()
                     .padding(.leading, 16)
                 
-                // Hakkında
+                // About
                 Button(action: {
-                    print("Hakkında tıklandı")
+                    print("About tapped")
                 }) {
                     HStack {
-                        Text("Hakkında")
+                        Text("About")
                             .foregroundColor(.primary)
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -88,7 +88,7 @@ struct SettingsView: View {
                 .foregroundColor(.secondary)
                 .padding(.bottom)
         }
-        .frame(width: 300, height: 400)
+        .frame(width: 320, height: 450)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }

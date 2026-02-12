@@ -3,7 +3,7 @@ import Foundation
 class ISPManager: ObservableObject {
     static let shared = ISPManager()
     
-    @Published var ispName: String = "Algılanıyor..."
+    @Published var ispName: String = "Detecting..."
     @Published var isDetecting: Bool = false
     
     private let cacheKey = "cached_isp_info"
@@ -45,10 +45,10 @@ class ISPManager: ObservableObject {
                         self.ispName = normalizedISP
                         self.cacheISP(normalizedISP)
                     } else {
-                        self.ispName = "Bilinmiyor"
+                        self.ispName = "Unknown"
                     }
                 case .failure:
-                    self.ispName = "Algılanamadı"
+                    self.ispName = "Detection failed"
                 }
                 self.isDetecting = false
             }
@@ -94,6 +94,6 @@ class ISPManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: cacheKey)
         UserDefaults.standard.removeObject(forKey: cacheTimestampKey)
         UserDefaults.standard.removeObject(forKey: refreshTimestampKey)
-        ispName = "Algılanıyor..."
+        ispName = "Detecting..."
     }
 }
