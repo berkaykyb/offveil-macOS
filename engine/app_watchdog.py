@@ -1,10 +1,3 @@
-"""
-OffVeil app watchdog.
-
-App kapanmadan deactivate gelmezse (ör. Xcode stop), state'e bakıp
-ayarları otomatik geri almak için owner process'i izler.
-"""
-
 import json
 import os
 import subprocess

@@ -76,9 +76,16 @@ struct MenuBarPopoverView: View {
             Spacer(minLength: 24)
 
             HStack(spacing: 8) {
-                Circle()
-                    .fill(Color(red: 0.11, green: 0.86, blue: 0.62))
-                    .frame(width: 6, height: 6)
+                ZStack {
+                    Circle()
+                        .fill(statusAccent.opacity(0.42))
+                        .frame(width: 16, height: 16)
+                        .blur(radius: 4)
+                    Circle()
+                        .fill(statusAccent)
+                        .frame(width: 7, height: 7)
+                }
+                .animation(.easeInOut(duration: 0.25), value: hasStatusError)
                 Text(ispManager.ispName)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(primaryTextColor)
@@ -98,21 +105,24 @@ struct MenuBarPopoverView: View {
         }
         .frame(width: 320, height: 450)
         .background(
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.03, green: 0.05, blue: 0.08),
-                        Color(red: 0.03, green: 0.04, blue: 0.06)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                Circle()
-                    .fill(Color(red: 0.08, green: 0.56, blue: 0.45).opacity(0.24))
-                    .frame(width: 220, height: 220)
-                    .offset(x: -130, y: -160)
-            }
+            GlassPanelBackground(isActive: isActive)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.24),
+                            Color.white.opacity(0.07)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.32), radius: 28, x: 0, y: 18)
     }
 
     private var header: some View {
@@ -180,6 +190,20 @@ struct MenuBarPopoverView: View {
 
     private var secondaryTextColor: Color {
         Color(red: 0.68, green: 0.75, blue: 0.80)
+    }
+
+    private var hasStatusError: Bool {
+        if errorMessage != nil {
+            return true
+        }
+        return ispManager.ispName == "Detection failed"
+    }
+
+    private var statusAccent: Color {
+        if hasStatusError {
+            return Color(red: 1.0, green: 0.37, blue: 0.41)
+        }
+        return Color(red: 0.11, green: 0.86, blue: 0.62)
     }
 
     @MainActor
@@ -258,6 +282,56 @@ struct MenuBarPopoverView: View {
         guard case .success(let data) = result else { return }
         guard data["success"] as? Bool == true else { return }
         isActive = (data["status"] as? String) == "active"
+    }
+}
+
+private struct GlassPanelBackground: View {
+    let isActive: Bool
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.06, blue: 0.10),
+                    Color(red: 0.03, green: 0.04, blue: 0.07)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(0.20),
+                            Color.white.opacity(0.0)
+                        ],
+                        center: .center,
+                        startRadius: 8,
+                        endRadius: 170
+                    )
+                )
+                .frame(width: 320, height: 170)
+                .offset(x: -18, y: -180)
+                .blur(radius: 2.5)
+
+            Circle()
+                .fill(
+                    (isActive
+                        ? Color(red: 0.11, green: 0.86, blue: 0.62)
+                        : Color(red: 1.0, green: 0.37, blue: 0.41))
+                        .opacity(0.20)
+                )
+                .frame(width: 250, height: 250)
+                .offset(x: -145, y: -140)
+                .blur(radius: 6)
+
+            Circle()
+                .fill(Color(red: 0.10, green: 0.20, blue: 0.34).opacity(0.28))
+                .frame(width: 220, height: 220)
+                .offset(x: 150, y: 140)
+                .blur(radius: 12)
+        }
     }
 }
 
