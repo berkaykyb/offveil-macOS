@@ -14,6 +14,7 @@ struct PowerButton: View {
     
     @State private var isPressed = false
     @State private var pulse = false
+    @State private var spinnerRotation: Double = 0
     
     var body: some View {
         Button(action: triggerToggle) {
@@ -71,11 +72,29 @@ struct PowerButton: View {
                     .scaleEffect(isPressed ? 0.94 : 1.0)
                     .offset(y: isPressed ? 1.2 : 0.0)
 
-                Image(systemName: "power")
-                    .font(.system(size: 34, weight: .heavy))
-                    .foregroundColor(iconColor)
-                    .shadow(color: iconShadowColor, radius: 3, x: 0, y: 2)
-                    .scaleEffect(isPressed ? 0.92 : 1.0)
+                if isDisabled {
+                    // Spinning ring during processing
+                    Circle()
+                        .trim(from: 0.0, to: 0.7)
+                        .stroke(
+                            iconColor.opacity(0.85),
+                            style: StrokeStyle(lineWidth: 3.5, lineCap: .round)
+                        )
+                        .frame(width: 34, height: 34)
+                        .rotationEffect(.degrees(spinnerRotation))
+                        .onAppear {
+                            withAnimation(.linear(duration: 0.8).repeatForever(autoreverses: false)) {
+                                spinnerRotation = 360
+                            }
+                        }
+                        .onDisappear { spinnerRotation = 0 }
+                } else {
+                    Image(systemName: "power")
+                        .font(.system(size: 34, weight: .heavy))
+                        .foregroundColor(iconColor)
+                        .shadow(color: iconShadowColor, radius: 3, x: 0, y: 2)
+                        .scaleEffect(isPressed ? 0.92 : 1.0)
+                }
             }
         }
         .buttonStyle(PlainButtonStyle())

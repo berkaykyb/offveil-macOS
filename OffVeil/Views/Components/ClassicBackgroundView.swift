@@ -10,15 +10,33 @@ import SwiftUI
 struct ClassicBackgroundView: View {
     let isActive: Bool
 
+    private var accentColor: Color {
+        isActive ? .ovAccentGreen : .ovAccentRed
+    }
+
     var body: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.08, green: 0.09, blue: 0.12),
-                Color(red: 0.05, green: 0.05, blue: 0.08)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.ovClassicTop,
+                    Color.ovClassicBottom
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            // Subtle top glow reflecting active/inactive state
+            RadialGradient(
+                colors: [
+                    accentColor.opacity(0.08),
+                    Color.clear
+                ],
+                center: .init(x: 0.5, y: 0.15),
+                startRadius: 10,
+                endRadius: 200
+            )
+            .animation(.easeInOut(duration: 0.6), value: isActive)
+        }
     }
 }
 

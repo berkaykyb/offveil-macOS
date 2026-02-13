@@ -18,15 +18,11 @@ struct EnergyBackgroundView: View {
     @State private var isAnimating = false
 
     private var accentColor: Color {
-        isActive
-            ? Color(red: 0.09, green: 0.90, blue: 0.58)
-            : Color(red: 0.96, green: 0.28, blue: 0.32)
+        isActive ? .ovAccentGreen : .ovAccentRed
     }
 
     private var accentSecondary: Color {
-        isActive
-            ? Color(red: 0.04, green: 0.68, blue: 0.48)
-            : Color(red: 0.78, green: 0.14, blue: 0.20)
+        isActive ? .ovAccentGreenDeep : .ovAccentRedDeep
     }
 
     var body: some View {
@@ -34,8 +30,8 @@ struct EnergyBackgroundView: View {
             // Deep dark base
             LinearGradient(
                 colors: [
-                    Color(red: 0.03, green: 0.04, blue: 0.08),
-                    Color(red: 0.02, green: 0.02, blue: 0.05)
+                    Color.ovDarkTop,
+                    Color.ovDarkBottom
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

@@ -1,9 +1,33 @@
 import Foundation
 
+enum ISPStatus: Equatable {
+    case detecting
+    case detected(String)
+    case unknown
+    case failed
+
+    var displayName: String {
+        switch self {
+        case .detecting: return ""
+        case .detected(let name): return name
+        case .unknown: return ""
+        case .failed: return ""
+        }
+    }
+
+    var isError: Bool {
+        self == .failed
+    }
+
+    var isDetecting: Bool {
+        self == .detecting
+    }
+}
+
 class ISPManager: ObservableObject {
     static let shared = ISPManager()
     
-    @Published var ispName: String = "Detecting..."
+    @Published var ispStatus: ISPStatus = .detecting
     @Published var isDetecting: Bool = false
     
     private let cacheKey = "cached_isp_info"
@@ -23,7 +47,7 @@ class ISPManager: ObservableObject {
 
         // Cache'i ekranda hemen göster
         if let cachedISP = getCachedISP() {
-            ispName = cachedISP
+            ispStatus = .detected(cachedISP)
         }
 
         // Çok sık API çağrısı yapma
@@ -42,13 +66,13 @@ class ISPManager: ObservableObject {
                 case .success(let data):
                     if data["success"] as? Bool == true,
                        let normalizedISP = data["normalized_isp"] as? String {
-                        self.ispName = normalizedISP
+                        self.ispStatus = .detected(normalizedISP)
                         self.cacheISP(normalizedISP)
                     } else {
-                        self.ispName = "Unknown"
+                        self.ispStatus = .unknown
                     }
                 case .failure:
-                    self.ispName = "Detection failed"
+                    self.ispStatus = .failed
                 }
                 self.isDetecting = false
             }
@@ -86,7 +110,7 @@ class ISPManager: ObservableObject {
     
     private func loadCachedISP() {
         if let cached = getCachedISP() {
-            ispName = cached
+            ispStatus = .detected(cached)
         }
     }
     
@@ -94,6 +118,6 @@ class ISPManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: cacheKey)
         UserDefaults.standard.removeObject(forKey: cacheTimestampKey)
         UserDefaults.standard.removeObject(forKey: refreshTimestampKey)
-        ispName = "Detecting..."
+        ispStatus = .detecting
     }
 }

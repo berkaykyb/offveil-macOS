@@ -13,6 +13,8 @@ struct MenuBarPopoverView: View {
     @State private var isProcessing = false
     @State private var errorMessage: String?
     @State private var showSettings = false
+    @State private var cleanupConfirmPending = false
+    @State private var quitConfirmPending = false
     @StateObject private var ispManager = ISPManager.shared
     @StateObject private var updateManager = UpdateManager.shared
     @ObservedObject private var settings = SettingsManager.shared
@@ -61,7 +63,7 @@ struct MenuBarPopoverView: View {
             VStack(spacing: 4) {
                 HStack(spacing: 7) {
                     Circle()
-                        .fill(isActive ? Color(red: 0.11, green: 0.86, blue: 0.62) : Color(red: 0.96, green: 0.28, blue: 0.32))
+                        .fill(isActive ? Color.ovStatusGreen : Color.ovAccentRed)
                         .frame(width: 8, height: 8)
                     Text(isActive ? localized(.protectionActive) : localized(.protectionInactive))
                         .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -76,7 +78,7 @@ struct MenuBarPopoverView: View {
             if let msg = errorMessage ?? updateManager.errorMessage {
                 Text(msg)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(Color(red: 0.96, green: 0.42, blue: 0.44))
+                    .foregroundColor(Color.ovErrorText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -98,7 +100,7 @@ struct MenuBarPopoverView: View {
                 Text(localizedISPName)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(primaryTextColor)
-                    .opacity(ispManager.isDetecting ? 0.55 : 1.0)
+                    .opacity(ispManager.ispStatus.isDetecting ? 0.55 : 1.0)
                     .lineLimit(1)
                 Spacer()
             }
@@ -139,20 +141,52 @@ struct MenuBarPopoverView: View {
                     )
             }
             .buttonStyle(PlainButtonStyle())
+
+            Button(action: {
+                if quitConfirmPending {
+                    NSApplication.shared.terminate(nil)
+                } else {
+                    quitConfirmPending = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        quitConfirmPending = false
+                    }
+                }
+            }) {
+                Image(systemName: quitConfirmPending ? "exclamationmark.triangle" : "power")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(quitConfirmPending ? .ovErrorText : primaryTextColor.opacity(0.50))
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(quitConfirmPending ? Color.ovErrorText.opacity(0.12) : Color.white.opacity(0.06))
+                    )
+                    .animation(.easeInOut(duration: 0.2), value: quitConfirmPending)
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
 
     private var footer: some View {
         HStack(spacing: 0) {
             Button(action: {
-                Task { await cleanup() }
+                if cleanupConfirmPending {
+                    cleanupConfirmPending = false
+                    Task { await cleanup() }
+                } else {
+                    cleanupConfirmPending = true
+                    // Auto-reset after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        cleanupConfirmPending = false
+                    }
+                }
             }) {
                 HStack(spacing: 5) {
-                    Image(systemName: "arrow.counterclockwise")
-                    Text(localized(.cleanup))
+                    Image(systemName: cleanupConfirmPending ? "exclamationmark.triangle" : "arrow.counterclockwise")
+                    Text(cleanupConfirmPending ? localized(.cleanupConfirm) : localized(.cleanup))
                 }
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(secondaryTextColor)
+                .foregroundColor(cleanupConfirmPending ? .ovErrorText : secondaryTextColor)
+                .animation(.easeInOut(duration: 0.2), value: cleanupConfirmPending)
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(isProcessing)
@@ -186,7 +220,7 @@ struct MenuBarPopoverView: View {
                     Text(localized(.updateAvailable))
                 }
                 .font(.system(size: 12, weight: .bold))
-                .foregroundColor(Color(red: 0.09, green: 0.90, blue: 0.58))
+                .foregroundColor(Color.ovAccentGreen)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             }
@@ -216,38 +250,31 @@ struct MenuBarPopoverView: View {
         }
     }
 
-    private var primaryTextColor: Color {
-        Color(red: 0.96, green: 0.98, blue: 1.0)
-    }
+    private var primaryTextColor: Color { .ovTextPrimary }
 
-    private var secondaryTextColor: Color {
-        Color(red: 0.68, green: 0.75, blue: 0.80)
-    }
+    private var secondaryTextColor: Color { .ovTextSecondary }
 
     private var hasStatusError: Bool {
         if errorMessage != nil {
             return true
         }
-        return ispManager.ispName == "Detection failed"
+        return ispManager.ispStatus.isError
     }
 
     private var statusAccent: Color {
-        if hasStatusError {
-            return Color(red: 1.0, green: 0.37, blue: 0.41)
-        }
-        return Color(red: 0.11, green: 0.86, blue: 0.62)
+        hasStatusError ? .ovErrorAccent : .ovStatusGreen
     }
 
     private var localizedISPName: String {
-        switch ispManager.ispName {
-        case "Detecting...":
+        switch ispManager.ispStatus {
+        case .detecting:
             return localized(.ispDetecting)
-        case "Unknown":
+        case .unknown:
             return localized(.ispUnknown)
-        case "Detection failed":
+        case .failed:
             return localized(.ispDetectionFailed)
-        default:
-            return ispManager.ispName
+        case .detected(let name):
+            return name
         }
     }
 
@@ -280,10 +307,11 @@ struct MenuBarPopoverView: View {
         case .success(let data):
             if data["success"] as? Bool == true {
                 isActive = !isActive
+                NotificationService.shared.sendProtectionNotification(isActive: isActive)
                 if isActive {
                     if let normalizedISP = data["isp_normalized"] as? String,
                        !normalizedISP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        ispManager.ispName = normalizedISP
+                        ispManager.ispStatus = .detected(normalizedISP)
                     }
                 }
             } else {
@@ -304,6 +332,7 @@ struct MenuBarPopoverView: View {
 
         isProcessing = true
         errorMessage = nil
+        updateManager.errorMessage = nil
         defer { isProcessing = false }
 
         // 1. Deactivate if currently active

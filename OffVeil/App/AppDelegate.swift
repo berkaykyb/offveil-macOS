@@ -7,12 +7,14 @@
 
 import AppKit
 import SwiftUI
+import Network
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var globalEventMonitor: Any?
     private var localEventMonitor: Any?
+    private var hotkeyMonitor: Any?
     private var statusChangeObserver: NSObjectProtocol?
     private let settings = SettingsManager.shared
     
@@ -29,16 +31,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         // Popover oluştur
         popover = NSPopover()
         popover?.contentSize = NSSize(width: 320, height: 450)
-        popover?.behavior = .transient
+        popover?.behavior = .semitransient
         popover?.delegate = self
         refreshPopoverContent()
         observeProtectionStatusChanges()
 
         applyStartupPreferences()
-
-        Task {
-            await refreshStatusItemIcon()
-        }
+        NetworkMonitor.shared.startMonitoring()
+        UpdateManager.shared.startPeriodicChecks()
+        NotificationService.shared.requestAuthorization()
+        registerGlobalHotkey()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self else { return }
@@ -199,8 +201,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
     
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // Uygulama kapanmadan önce cleanup'ı senkron tamamla.
-        restoreSystemOnExit()
+        // Run cleanup on a background thread with a hard timeout.
+        let semaphore = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.restoreSystemOnExit()
+            semaphore.signal()
+        }
+        // Wait at most 5 seconds — never hang the quit process.
+        _ = semaphore.wait(timeout: .now() + 5.0)
         return .terminateNow
     }
     
@@ -261,6 +269,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     deinit {
         if let observer = statusChangeObserver {
             NotificationCenter.default.removeObserver(observer)
+        }
+        if let monitor = hotkeyMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+
+    // MARK: - Global Hotkey (⌘⇧O)
+
+    private func registerGlobalHotkey() {
+        hotkeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // ⌘⇧O — Command + Shift + O
+            guard event.modifierFlags.contains([.command, .shift]),
+                  event.charactersIgnoringModifiers?.lowercased() == "o" else {
+                return
+            }
+            DispatchQueue.main.async {
+                self?.statusItemClicked()
+            }
         }
     }
 }
