@@ -13,6 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var popover: NSPopover?
     private var globalEventMonitor: Any?
     private var localEventMonitor: Any?
+    private var statusChangeObserver: NSObjectProtocol?
     private let settings = SettingsManager.shared
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -20,9 +21,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "shield.fill", accessibilityDescription: "OffVeil")
             button.action = #selector(statusItemClicked)
             button.target = self
+            updateStatusItemIcon(isActive: false)
         }
         
         // Popover oluştur
@@ -31,8 +32,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover?.behavior = .transient
         popover?.delegate = self
         refreshPopoverContent()
+        observeProtectionStatusChanges()
 
         applyStartupPreferences()
+
+        Task {
+            await refreshStatusItemIcon()
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self else { return }
+            Task {
+                await self.refreshStatusItemIcon()
+            }
+        }
     }
     
     @objc func statusItemClicked() {
@@ -104,6 +117,67 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
     }
 
+    private func observeProtectionStatusChanges() {
+        statusChangeObserver = NotificationCenter.default.addObserver(
+            forName: .offveilProtectionStatusChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            let isActive = notification.userInfo?[OffVeilNotificationUserInfoKey.isActive] as? Bool ?? false
+            self.updateStatusItemIcon(isActive: isActive)
+        }
+    }
+
+    private func updateStatusItemIcon(isActive: Bool) {
+        guard let button = statusItem?.button else {
+            return
+        }
+
+        button.title = ""
+        button.imagePosition = .imageOnly
+
+        if let image = loadStatusIcon(isActive: isActive) {
+            image.size = NSSize(width: 18, height: 18)
+            image.isTemplate = false
+            button.image = image
+            return
+        }
+
+        let fallback = NSImage(
+            systemSymbolName: isActive ? "shield.fill" : "shield",
+            accessibilityDescription: "OffVeil"
+        )
+        fallback?.isTemplate = true
+        button.image = fallback
+    }
+
+    private func loadStatusIcon(isActive: Bool) -> NSImage? {
+        let imageName = isActive ? "OffVeilLogoActive" : "OffVeilLogoInactive"
+
+        if let image = NSImage(named: NSImage.Name(imageName)) {
+            return image
+        }
+
+        if let image = Bundle.main.image(forResource: NSImage.Name(imageName)) {
+            return image
+        }
+
+        return nil
+    }
+
+    private func refreshStatusItemIcon() async {
+        let statusResult = await EngineService.shared.getStatus()
+        var isActive = false
+        if case .success(let statusData) = statusResult {
+            isActive = (statusData["status"] as? String) == "active"
+        }
+
+        await MainActor.run {
+            self.updateStatusItemIcon(isActive: isActive)
+        }
+    }
+
     func popoverDidClose(_ notification: Notification) {
         removeEventMonitors()
     }
@@ -140,6 +214,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
             if self.settings.autoActivateOnLaunch {
                 await self.activateProtectionIfNeeded()
+                await self.refreshStatusItemIcon()
             }
 
             guard !self.settings.startHiddenOnLaunch else {
@@ -165,5 +240,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
 
         _ = await EngineService.shared.executeCommand("activate")
+    }
+
+    deinit {
+        if let observer = statusChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 }

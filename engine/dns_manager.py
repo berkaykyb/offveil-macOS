@@ -69,36 +69,4 @@ def get_active_interfaces():
         return []
 
 
-def set_dns_servers(interface, dns_servers):
-    """Belirtilen interface için DNS sunucularını ayarla"""
-    try:
-        # DNS sunucularını boşlukla ayırarak komut oluştur
-        cmd = ["networksetup", "-setdnsservers", interface] + dns_servers
-        
-        subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        
-        return True
-    
-    except subprocess.CalledProcessError:
-        return False
 
-
-def clear_dns_servers(interface):
-    """Belirtilen interface için DNS sunucularını temizle (DHCP'ye dön)""" 
-    try:
-        subprocess.run(
-            ["networksetup", "-setdnsservers", interface, "empty"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        
-        return True
-    
-    except subprocess.CalledProcessError:
-        return False

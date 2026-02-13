@@ -490,16 +490,10 @@ private struct AppMark: View {
                 .fill(Color.white.opacity(0.09))
                 .frame(width: 34, height: 34)
 
-            if let image = NSImage(named: NSImage.Name("OffVeilLogo")) {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 20, height: 20)
-            } else {
-                Image(systemName: "shield")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white.opacity(0.75))
-            }
+            Image("OffVeilLogoActive")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
         }
     }
 }

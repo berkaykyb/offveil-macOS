@@ -37,6 +37,9 @@ struct MenuBarPopoverView: View {
                 await refreshStatus()
             }
         }
+        .onChange(of: isActive) { _ in
+            publishProtectionState()
+        }
         .onDisappear {
             showSettings = false
         }
@@ -128,7 +131,7 @@ struct MenuBarPopoverView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            BrandIconView()
+            BrandIconView(isActive: isActive)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("offveil")
@@ -224,6 +227,14 @@ struct MenuBarPopoverView: View {
         AppLocalizer.text(key, language: settings.appLanguage)
     }
 
+    private func publishProtectionState() {
+        NotificationCenter.default.post(
+            name: .offveilProtectionStatusChanged,
+            object: nil,
+            userInfo: [OffVeilNotificationUserInfoKey.isActive: isActive]
+        )
+    }
+
     @MainActor
     private func toggleProtection() async {
         if isProcessing {
@@ -245,9 +256,6 @@ struct MenuBarPopoverView: View {
                     if let normalizedISP = data["isp_normalized"] as? String,
                        !normalizedISP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         ispManager.ispName = normalizedISP
-                    } else if let detectedISP = data["isp_detected"] as? String,
-                              !detectedISP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        ispManager.ispName = detectedISP
                     }
                 }
             } else {
@@ -300,6 +308,7 @@ struct MenuBarPopoverView: View {
         guard case .success(let data) = result else { return }
         guard data["success"] as? Bool == true else { return }
         isActive = (data["status"] as? String) == "active"
+        publishProtectionState()
     }
 }
 
@@ -354,29 +363,38 @@ private struct GlassPanelBackground: View {
 }
 
 private struct BrandIconView: View {
-    private let brandImageName = "OffVeilLogo"
+    let isActive: Bool
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(red: 0.06, green: 0.21, blue: 0.18))
+                .fill(iconBackgroundColor)
                 .frame(width: 40, height: 40)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color(red: 0.13, green: 0.56, blue: 0.46), lineWidth: 1)
+                        .stroke(iconBorderColor, lineWidth: 1)
                 )
 
-            if let image = NSImage(named: brandImageName) {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-            } else {
-                Image(systemName: "shield")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(Color(red: 0.09, green: 0.88, blue: 0.66))
-            }
+            let imageName = isActive ? "OffVeilLogoActive" : "OffVeilLogoInactive"
+            Image(imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 24, height: 24)
         }
+    }
+
+    private var iconBackgroundColor: Color {
+        if isActive {
+            return Color(red: 0.06, green: 0.21, blue: 0.18)
+        }
+        return Color(red: 0.27, green: 0.06, blue: 0.09)
+    }
+
+    private var iconBorderColor: Color {
+        if isActive {
+            return Color(red: 0.13, green: 0.56, blue: 0.46)
+        }
+        return Color(red: 0.82, green: 0.26, blue: 0.31)
     }
 }
 

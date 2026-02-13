@@ -41,7 +41,7 @@ struct PowerButton: View {
                     .shadow(
                         color: isActive
                             ? Color(red: 0.04, green: 0.62, blue: 0.47).opacity(0.36)
-                            : Color.black.opacity(0.28),
+                            : Color(red: 0.56, green: 0.12, blue: 0.19).opacity(0.30),
                         radius: 18,
                         x: 0,
                         y: 10
@@ -104,8 +104,8 @@ struct PowerButton: View {
 
         return LinearGradient(
             colors: [
-                Color(red: 0.26, green: 0.29, blue: 0.35),
-                Color(red: 0.14, green: 0.16, blue: 0.21)
+                Color(red: 0.47, green: 0.13, blue: 0.19),
+                Color(red: 0.26, green: 0.06, blue: 0.11)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -126,8 +126,8 @@ struct PowerButton: View {
 
         return LinearGradient(
             colors: [
-                Color(red: 0.20, green: 0.22, blue: 0.28),
-                Color(red: 0.11, green: 0.12, blue: 0.16)
+                Color(red: 0.40, green: 0.10, blue: 0.16),
+                Color(red: 0.22, green: 0.05, blue: 0.10)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -138,7 +138,7 @@ struct PowerButton: View {
         if isActive {
             return Color(red: 0.64, green: 1.00, blue: 0.88).opacity(0.90)
         }
-        return Color.white.opacity(0.16)
+        return Color(red: 1.0, green: 0.53, blue: 0.59).opacity(0.72)
     }
 
     private var activeGlowColor: Color {
