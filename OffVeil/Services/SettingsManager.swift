@@ -22,6 +22,11 @@ enum AppLanguage: String, CaseIterable {
     }
 }
 
+enum AppTheme: String, CaseIterable {
+    case energy
+    case classic
+}
+
 class SettingsManager: ObservableObject {
     static let shared = SettingsManager()
     
@@ -32,6 +37,7 @@ class SettingsManager: ObservableObject {
         static let autoActivateOnLaunch = "autoActivateOnLaunch"
         static let startHiddenOnLaunch = "startHiddenOnLaunch"
         static let appLanguage = "appLanguage"
+        static let appTheme = "appTheme"
     }
     
     @Published var launchAtLogin: Bool {
@@ -63,6 +69,12 @@ class SettingsManager: ObservableObject {
             defaults.set(appLanguage.rawValue, forKey: Keys.appLanguage)
         }
     }
+
+    @Published var appTheme: AppTheme {
+        didSet {
+            defaults.set(appTheme.rawValue, forKey: Keys.appTheme)
+        }
+    }
     
     private init() {
         self.launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
@@ -74,6 +86,13 @@ class SettingsManager: ObservableObject {
             self.appLanguage = parsedLanguage
         } else {
             self.appLanguage = .en
+        }
+
+        if let savedTheme = defaults.string(forKey: Keys.appTheme),
+           let parsedTheme = AppTheme(rawValue: savedTheme) {
+            self.appTheme = parsedTheme
+        } else {
+            self.appTheme = .energy
         }
 
         if !launchAtLogin {

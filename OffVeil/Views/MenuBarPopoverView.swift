@@ -114,7 +114,7 @@ struct MenuBarPopoverView: View {
         }
         .frame(width: 320, height: 450)
         .background(
-            EnergyBackgroundView(isActive: isActive)
+            ThemedBackgroundView(isActive: isActive)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(

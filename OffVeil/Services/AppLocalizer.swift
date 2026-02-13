@@ -43,6 +43,10 @@ enum L10nKey: String {
     case ispDetecting
     case ispUnknown
     case ispDetectionFailed
+
+    case themeSection
+    case themeEnergy
+    case themeClassic
 }
 
 struct AppLocalizer {
@@ -95,7 +99,11 @@ struct AppLocalizer {
 
             .ispDetecting: "Detecting...",
             .ispUnknown: "Unknown",
-            .ispDetectionFailed: "Detection failed"
+            .ispDetectionFailed: "Detection failed",
+
+            .themeSection: "Theme",
+            .themeEnergy: "Energy",
+            .themeClassic: "Classic"
         ],
         .tr: [
             .settingsTitle: "Ayarlar",
@@ -139,7 +147,11 @@ struct AppLocalizer {
 
             .ispDetecting: "Algilaniyor...",
             .ispUnknown: "Bilinmiyor",
-            .ispDetectionFailed: "Algilama basarisiz"
+            .ispDetectionFailed: "Algilama basarisiz",
+
+            .themeSection: "Tema",
+            .themeEnergy: "Enerji",
+            .themeClassic: "Klasik"
         ]
     ]
 }

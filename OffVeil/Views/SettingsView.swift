@@ -33,7 +33,7 @@ struct SettingsView: View {
             .padding(.bottom, 10)
         }
         .frame(width: 320, height: 450)
-        .background(EnergyBackgroundView(isActive: isActive))
+        .background(ThemedBackgroundView(isActive: isActive))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onAppear {
             pendingLanguage = settings.appLanguage
@@ -121,6 +121,10 @@ struct SettingsView: View {
                         pendingLanguage: $pendingLanguage,
                         applyAction: applyLanguageSelection
                     )
+                }
+
+                SettingsSectionCard(title: localized(.themeSection)) {
+                    ThemePickerRow()
                 }
 
                 SettingsSectionCard(title: localized(.infoSection)) {
@@ -438,6 +442,99 @@ private struct SettingsSectionCard<Content: View>: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
+    }
+}
+
+private struct ThemePickerRow: View {
+    @ObservedObject private var settings = SettingsManager.shared
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(AppTheme.allCases, id: \.rawValue) { theme in
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        settings.appTheme = theme
+                    }
+                }) {
+                    VStack(spacing: 6) {
+                        themePreview(theme)
+                            .frame(width: 60, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(
+                                        settings.appTheme == theme
+                                            ? Color(red: 0.14, green: 0.88, blue: 0.68)
+                                            : Color.white.opacity(0.12),
+                                        lineWidth: settings.appTheme == theme ? 2 : 1
+                                    )
+                            )
+
+                        Text(themeLabel(theme))
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(
+                                settings.appTheme == theme
+                                    ? Color(red: 0.14, green: 0.88, blue: 0.68)
+                                    : .white.opacity(0.65)
+                            )
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    @ViewBuilder
+    private func themePreview(_ theme: AppTheme) -> some View {
+        switch theme {
+        case .energy:
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.03, green: 0.04, blue: 0.08),
+                        Color(red: 0.02, green: 0.02, blue: 0.05)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                // Mini vein lines
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: 12))
+                    path.addCurve(to: CGPoint(x: 35, y: 22), control1: CGPoint(x: 10, y: 8), control2: CGPoint(x: 25, y: 28))
+                    path.addCurve(to: CGPoint(x: 60, y: 18), control1: CGPoint(x: 42, y: 18), control2: CGPoint(x: 52, y: 14))
+                }
+                .stroke(Color(red: 0.09, green: 0.90, blue: 0.58).opacity(0.5), lineWidth: 1)
+                .blur(radius: 0.5)
+                Path { path in
+                    path.move(to: CGPoint(x: 10, y: 30))
+                    path.addCurve(to: CGPoint(x: 50, y: 10), control1: CGPoint(x: 20, y: 35), control2: CGPoint(x: 40, y: 5))
+                }
+                .stroke(Color(red: 0.09, green: 0.90, blue: 0.58).opacity(0.3), lineWidth: 0.8)
+                .blur(radius: 0.4)
+            }
+        case .classic:
+            LinearGradient(
+                colors: [
+                    Color(red: 0.08, green: 0.09, blue: 0.12),
+                    Color(red: 0.05, green: 0.05, blue: 0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    private func themeLabel(_ theme: AppTheme) -> String {
+        let lang = settings.appLanguage
+        switch theme {
+        case .energy:
+            return AppLocalizer.text(.themeEnergy, language: lang)
+        case .classic:
+            return AppLocalizer.text(.themeClassic, language: lang)
+        }
     }
 }
 
