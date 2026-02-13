@@ -37,7 +37,30 @@ class UpdateManager: ObservableObject {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
 
+    private var periodicTask: Task<Void, Never>?
+
     private init() {}
+
+    // MARK: - Periodic check
+
+    /// Start checking for updates every 6 hours in the background.
+    func startPeriodicChecks() {
+        guard periodicTask == nil else { return }
+        periodicTask = Task.detached { [weak self] in
+            // Initial check after 30 seconds (let the app finish launching)
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+            while !Task.isCancelled {
+                await self?.checkForUpdate()
+                // Re-check every 6 hours
+                try? await Task.sleep(nanoseconds: 6 * 60 * 60 * 1_000_000_000)
+            }
+        }
+    }
+
+    func stopPeriodicChecks() {
+        periodicTask?.cancel()
+        periodicTask = nil
+    }
 
     // MARK: - Public API
 
@@ -120,8 +143,11 @@ class UpdateManager: ObservableObject {
     // MARK: - Download
 
     private func downloadDMG(from url: URL) async throws -> URL {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OffVeilUpdate", isDirectory: true)
+        // Use Application Support for user-private download location (not world-readable /tmp)
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let tempDir = appSupport
+            .appendingPathComponent("OffVeil", isDirectory: true)
+            .appendingPathComponent("Update", isDirectory: true)
 
         try? FileManager.default.removeItem(at: tempDir)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -203,6 +229,9 @@ class UpdateManager: ObservableObject {
             // Copy new app from mounted DMG to staging
             try fm.copyItem(at: sourceApp, to: newAppStaging)
 
+            // Verify code signature of the new app before installing
+            try verifyCodeSignature(at: newAppStaging)
+
             // Swap: current → backup, staging → current
             try fm.moveItem(at: destURL, to: backupURL)
             try fm.moveItem(at: newAppStaging, to: destURL)
@@ -276,19 +305,36 @@ class UpdateManager: ObservableObject {
         process.waitUntilExit()
     }
 
-    private func relaunchApp(at appURL: URL) {
-        // Use /usr/bin/open to relaunch the app after a short delay
-        let script = """
-        sleep 1
-        open "\(appURL.path)"
-        """
-
+    /// Verify the code signature of the downloaded app.
+    private func verifyCodeSignature(at appURL: URL) throws {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", script]
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        process.arguments = ["--verify", "--deep", "--strict", appURL.path]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
-        try? process.run()
+        try process.run()
+        process.waitUntilExit()
+
+        if process.terminationStatus != 0 {
+            throw NSError(
+                domain: "UpdateManager", code: -6,
+                userInfo: [NSLocalizedDescriptionKey: "Code signature verification failed. The update may be tampered."]
+            )
+        }
+    }
+
+    private func relaunchApp(at appURL: URL) {
+        // Use /usr/bin/open with proper argument passing (no shell interpolation)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-g", "--fresh", appURL.path]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        // Launch after a short delay to let the current process begin terminating
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+            try? process.run()
+        }
 
         // Quit the current app
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
