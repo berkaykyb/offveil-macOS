@@ -523,49 +523,6 @@ private struct ThemePickerRow: View {
     }
 }
 
-private struct SettingsGlassBackground: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.04, green: 0.06, blue: 0.10),
-                    Color(red: 0.03, green: 0.04, blue: 0.07)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color.white.opacity(0.20),
-                            Color.white.opacity(0.0)
-                        ],
-                        center: .center,
-                        startRadius: 8,
-                        endRadius: 170
-                    )
-                )
-                .frame(width: 320, height: 170)
-                .offset(x: -18, y: -180)
-                .blur(radius: 2.5)
-
-            Circle()
-                .fill(Color(red: 0.18, green: 0.55, blue: 0.88).opacity(0.20))
-                .frame(width: 280, height: 280)
-                .offset(x: -145, y: -120)
-                .blur(radius: 8)
-
-            Circle()
-                .fill(Color(red: 0.10, green: 0.20, blue: 0.34).opacity(0.28))
-                .frame(width: 220, height: 220)
-                .offset(x: 150, y: 140)
-                .blur(radius: 12)
-        }
-    }
-}
-
 private struct AppMark: View {
     var body: some View {
         ZStack {

@@ -35,6 +35,8 @@ enum L10nKey: String {
 
     case protectionActive
     case protectionInactive
+    case connectionSecured
+    case tapToEnable
     case cleanup
     case checkUpdates
     case operationFailed
@@ -92,6 +94,8 @@ struct AppLocalizer {
 
             .protectionActive: "Protection Active",
             .protectionInactive: "Protection Inactive",
+            .connectionSecured: "Your connection is secured",
+            .tapToEnable: "Tap to enable protection",
             .cleanup: "Cleanup",
             .checkUpdates: "Check for Updates",
             .operationFailed: "Operation failed",
@@ -140,6 +144,8 @@ struct AppLocalizer {
 
             .protectionActive: "Koruma Aktif",
             .protectionInactive: "Koruma Pasif",
+            .connectionSecured: "Baglantiniz guvende",
+            .tapToEnable: "Koruma icin dokunun",
             .cleanup: "Temizle",
             .checkUpdates: "Guncellemeleri kontrol et",
             .operationFailed: "Islem basarisiz",
