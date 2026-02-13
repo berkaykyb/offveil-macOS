@@ -26,7 +26,7 @@ struct MenuBarPopoverView: View {
             }
             
             if showSettings {
-                SettingsView(isPresented: $showSettings)
+                SettingsView(isPresented: $showSettings, isActive: $isActive)
                     .transition(.move(edge: .trailing))
             }
         }
@@ -51,22 +51,27 @@ struct MenuBarPopoverView: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 16)
 
-            Spacer(minLength: 20)
+            Spacer(minLength: 16)
 
             PowerButton(isActive: $isActive, isDisabled: isProcessing) {
                 Task { await toggleProtection() }
             }
             .frame(maxWidth: .infinity)
 
-            VStack(spacing: 10) {
-                Text(isActive ? localized(.protectionActive) : localized(.protectionInactive))
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(primaryTextColor)
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.9)
-                    .lineLimit(1)
+            VStack(spacing: 4) {
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(isActive ? Color(red: 0.11, green: 0.86, blue: 0.62) : Color(red: 0.96, green: 0.28, blue: 0.32))
+                        .frame(width: 8, height: 8)
+                    Text(isActive ? localized(.protectionActive) : localized(.protectionInactive))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(primaryTextColor)
+                }
+                Text(isActive ? "Your connection is secured" : "Tap to enable protection")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(secondaryTextColor)
             }
-            .padding(.top, 14)
+            .padding(.top, 10)
 
             if let errorMessage {
                 Text(errorMessage)
@@ -109,7 +114,7 @@ struct MenuBarPopoverView: View {
         }
         .frame(width: 320, height: 450)
         .background(
-            GlassPanelBackground(isActive: isActive)
+            EnergyBackgroundView(isActive: isActive)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
@@ -131,26 +136,21 @@ struct MenuBarPopoverView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            BrandIconView(isActive: isActive)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("offveil")
-                    .font(.system(size: 23, weight: .black, design: .rounded))
-                    .foregroundColor(primaryTextColor)
-                Text(localized(.secureTunnel))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(secondaryTextColor)
-            }
+            let logoName = isActive ? "OffVeilMenuActive" : "OffVeilMenuInactive"
+            Image(logoName)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 28)
 
             Spacer()
 
             Button(action: { showSettings = true }) {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(primaryTextColor.opacity(0.86))
-                    .padding(9)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(primaryTextColor.opacity(0.72))
+                    .padding(8)
                     .background(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.white.opacity(0.06))
                     )
             }
@@ -159,29 +159,31 @@ struct MenuBarPopoverView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 0) {
             Button(action: {
-                Task { await clearAll() }
+                Task { await cleanup() }
             }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.counterclockwise.circle")
-                    Text(localized(.clearAll))
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text(localized(.cleanup))
                 }
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(red: 0.95, green: 0.42, blue: 0.42))
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(secondaryTextColor)
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(isProcessing)
 
+            Spacer()
+
             Button(action: openUpdatesPage) {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.down.app")
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.down.circle")
                     Text(localized(.checkUpdates))
                 }
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(primaryTextColor.opacity(0.88))
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(secondaryTextColor)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(isProcessing)
@@ -269,7 +271,7 @@ struct MenuBarPopoverView: View {
     }
 
     @MainActor
-    private func clearAll() async {
+    private func cleanup() async {
         if isProcessing {
             return
         }
@@ -278,9 +280,12 @@ struct MenuBarPopoverView: View {
         errorMessage = nil
         defer { isProcessing = false }
 
+        // 1. Deactivate if currently active
         _ = await EngineService.shared.executeCommand("deactivate")
-        let restoreResult = await EngineService.shared.executeCommand("check_and_restore")
-        switch restoreResult {
+
+        // 2. Full system cleanup (DNS, proxy, orphan processes)
+        let cleanupResult = await EngineService.shared.executeCommand("cleanup")
+        switch cleanupResult {
         case .success(let data):
             let success = data["success"] as? Bool ?? false
             if !success {
@@ -290,8 +295,13 @@ struct MenuBarPopoverView: View {
             errorMessage = error.localizedDescription
         }
 
+        // 3. Fallback: also run check_and_restore
+        _ = await EngineService.shared.executeCommand("check_and_restore")
+
         ispManager.invalidateCache()
         ispManager.detectISP()
+        isActive = false
+        publishProtectionState()
         await refreshStatus()
     }
 
@@ -309,92 +319,6 @@ struct MenuBarPopoverView: View {
         guard data["success"] as? Bool == true else { return }
         isActive = (data["status"] as? String) == "active"
         publishProtectionState()
-    }
-}
-
-private struct GlassPanelBackground: View {
-    let isActive: Bool
-
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.04, green: 0.06, blue: 0.10),
-                    Color(red: 0.03, green: 0.04, blue: 0.07)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color.white.opacity(0.20),
-                            Color.white.opacity(0.0)
-                        ],
-                        center: .center,
-                        startRadius: 8,
-                        endRadius: 170
-                    )
-                )
-                .frame(width: 320, height: 170)
-                .offset(x: -18, y: -180)
-                .blur(radius: 2.5)
-
-            Circle()
-                .fill(
-                    (isActive
-                        ? Color(red: 0.11, green: 0.86, blue: 0.62)
-                        : Color(red: 1.0, green: 0.37, blue: 0.41))
-                        .opacity(0.20)
-                )
-                .frame(width: 250, height: 250)
-                .offset(x: -145, y: -140)
-                .blur(radius: 6)
-
-            Circle()
-                .fill(Color(red: 0.10, green: 0.20, blue: 0.34).opacity(0.28))
-                .frame(width: 220, height: 220)
-                .offset(x: 150, y: 140)
-                .blur(radius: 12)
-        }
-    }
-}
-
-private struct BrandIconView: View {
-    let isActive: Bool
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(iconBackgroundColor)
-                .frame(width: 40, height: 40)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(iconBorderColor, lineWidth: 1)
-                )
-
-            let imageName = isActive ? "OffVeilLogoActive" : "OffVeilLogoInactive"
-            Image(imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 24, height: 24)
-        }
-    }
-
-    private var iconBackgroundColor: Color {
-        if isActive {
-            return Color(red: 0.06, green: 0.21, blue: 0.18)
-        }
-        return Color(red: 0.27, green: 0.06, blue: 0.09)
-    }
-
-    private var iconBorderColor: Color {
-        if isActive {
-            return Color(red: 0.13, green: 0.56, blue: 0.46)
-        }
-        return Color(red: 0.82, green: 0.26, blue: 0.31)
     }
 }
 

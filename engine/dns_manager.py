@@ -69,4 +69,18 @@ def get_active_interfaces():
         return []
 
 
+def reset_dns_to_default(interface):
+    """Reset DNS servers to default (DHCP/automatic) for given interface."""
+    try:
+        subprocess.run(
+            ["networksetup", "-setdnsservers", interface, "Empty"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 

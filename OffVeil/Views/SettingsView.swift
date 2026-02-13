@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Binding var isPresented: Bool
+    @Binding var isActive: Bool
     @ObservedObject private var settings = SettingsManager.shared
 
     @State private var screen: SettingsScreen = .main
@@ -32,7 +33,7 @@ struct SettingsView: View {
             .padding(.bottom, 10)
         }
         .frame(width: 320, height: 450)
-        .background(SettingsGlassBackground())
+        .background(EnergyBackgroundView(isActive: isActive))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onAppear {
             pendingLanguage = settings.appLanguage
@@ -499,5 +500,5 @@ private struct AppMark: View {
 }
 
 #Preview {
-    SettingsView(isPresented: .constant(true))
+    SettingsView(isPresented: .constant(true), isActive: .constant(false))
 }

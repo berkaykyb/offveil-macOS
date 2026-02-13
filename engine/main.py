@@ -79,6 +79,8 @@ def main():
         handle_activate()
     elif command == "deactivate":
         handle_deactivate()
+    elif command == "cleanup":
+        handle_cleanup()
     elif command == "check_and_restore":
         handle_check_and_restore()
     elif command == "detect_isp":
@@ -259,6 +261,140 @@ def handle_deactivate():
 
     except Exception as e:
         error_response(f"Deactivation failed: {str(e)}")
+
+
+def handle_cleanup():
+    """
+    Full system cleanup:
+      1. Stop any running SpoofDPI / DPI bypass processes
+      2. Reset all proxy settings on all active interfaces
+      3. Reset DNS settings to default on all active interfaces
+      4. Kill any orphaned spoofdpi/dpi processes
+      5. Clear state file
+    
+    This is a nuclear option - resets everything to factory defaults.
+    """
+    try:
+        errors = []
+        actions_taken = []
+
+        # 1. If we have saved state, restore from it first
+        if state_manager.is_active():
+            state = state_manager.load_state()
+            if state:
+                access_pid = state.get("access_pid")
+                interface = state.get("active_interface")
+                original_proxy_state = state.get("original_proxy_state")
+
+                if access_pid:
+                    try:
+                        access_manager.stop_access_process(access_pid)
+                        actions_taken.append(f"stopped_saved_process_{access_pid}")
+                    except Exception as e:
+                        errors.append(f"stop saved process: {e}")
+
+                if interface and original_proxy_state:
+                    try:
+                        proxy_manager.restore_proxy_state(interface, original_proxy_state)
+                        actions_taken.append(f"restored_proxy_{interface}")
+                    except Exception as e:
+                        errors.append(f"restore proxy: {e}")
+
+        # 2. Kill ALL spoofdpi-related processes (catches orphans from other tools too)
+        try:
+            killed = _kill_all_dpi_processes()
+            if killed:
+                actions_taken.append(f"killed_orphan_processes_{killed}")
+        except Exception as e:
+            errors.append(f"kill orphans: {e}")
+
+        # 3. Reset proxy on ALL active interfaces
+        active_interfaces = dns_manager.get_active_interfaces()
+        for iface in active_interfaces:
+            try:
+                proxy_manager.clear_system_proxy(iface)
+                actions_taken.append(f"cleared_proxy_{iface}")
+            except Exception as e:
+                errors.append(f"clear proxy {iface}: {e}")
+
+        # 4. Reset DNS to default (empty = DHCP/auto) on all active interfaces
+        for iface in active_interfaces:
+            try:
+                dns_manager.reset_dns_to_default(iface)
+                actions_taken.append(f"reset_dns_{iface}")
+            except Exception as e:
+                errors.append(f"reset dns {iface}: {e}")
+
+        # 5. Clear state file
+        state_manager.clear_state()
+        actions_taken.append("cleared_state")
+
+        # 6. Flush DNS cache
+        try:
+            _flush_dns_cache()
+            actions_taken.append("flushed_dns_cache")
+        except Exception:
+            pass  # non-critical
+
+        success = len(errors) == 0
+        response = {
+            "success": success,
+            "message": "Cleanup completed" if success else f"Cleanup completed with errors: {'; '.join(errors)}",
+            "actions": actions_taken,
+            "errors": errors,
+            "timestamp": datetime.now().isoformat(),
+        }
+        print(json.dumps(response))
+
+    except Exception as e:
+        error_response(f"Cleanup failed: {str(e)}")
+
+
+def _kill_all_dpi_processes():
+    """Kill any running spoofdpi or similar DPI bypass processes."""
+    killed_count = 0
+    process_names = ["spoofdpi", "spoofDPI", "SpoofDPI", "goodbyedpi", "GoodbyeDPI"]
+    
+    for proc_name in process_names:
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", proc_name],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                pids = result.stdout.strip().split("\n")
+                for pid_str in pids:
+                    pid_str = pid_str.strip()
+                    if not pid_str:
+                        continue
+                    try:
+                        pid = int(pid_str)
+                        # Don't kill ourselves
+                        if pid == os.getpid():
+                            continue
+                        os.kill(pid, 9)
+                        killed_count += 1
+                    except (ValueError, ProcessLookupError, PermissionError):
+                        pass
+        except Exception:
+            pass
+
+    return killed_count
+
+
+def _flush_dns_cache():
+    """Flush macOS DNS cache."""
+    try:
+        subprocess.run(
+            ["dscacheutil", "-flushcache"],
+            capture_output=True, check=False
+        )
+        subprocess.run(
+            ["sudo", "killall", "-HUP", "mDNSResponder"],
+            capture_output=True, check=False
+        )
+    except Exception:
+        pass
 
 
 def handle_detect_isp():

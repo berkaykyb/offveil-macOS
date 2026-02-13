@@ -143,8 +143,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             let aspectRatio = image.size.width / max(image.size.height, 1)
             let scaledWidth = menuBarHeight * aspectRatio
             image.size = NSSize(width: scaledWidth, height: menuBarHeight)
-            image.isTemplate = false
+            // Template mode: macOS renders white in dark, black in light menu bar
+            image.isTemplate = true
             button.image = image
+            // Active = full opacity, inactive = dimmed
+            button.alphaValue = isActive ? 1.0 : 0.45
         } else {
             let fallback = NSImage(
                 systemSymbolName: isActive ? "shield.fill" : "shield",
@@ -152,6 +155,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             )
             fallback?.isTemplate = true
             button.image = fallback
+            button.alphaValue = isActive ? 1.0 : 0.45
         }
     }
 

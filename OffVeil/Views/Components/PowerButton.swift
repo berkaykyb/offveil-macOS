@@ -19,9 +19,9 @@ struct PowerButton: View {
         Button(action: triggerToggle) {
             ZStack {
                 if isActive {
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .stroke(activeGlowColor.opacity(0.42), lineWidth: 2.2)
-                        .frame(width: 164, height: 164)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(activeGlowColor.opacity(0.42), lineWidth: 2.0)
+                        .frame(width: 126, height: 126)
                         .blur(radius: 1.2)
                         .scaleEffect(pulse ? 1.06 : 0.96)
                         .opacity(pulse ? 0.18 : 0.55)
@@ -31,23 +31,23 @@ struct PowerButton: View {
                         )
                 }
 
-                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(shellGradient)
-                    .frame(width: 152, height: 152)
+                    .frame(width: 116, height: 116)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 32, style: .continuous)
-                            .stroke(shellBorderColor, lineWidth: 1.2)
+                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                            .stroke(shellBorderColor, lineWidth: 1.0)
                     )
                     .shadow(
                         color: isActive
                             ? Color(red: 0.04, green: 0.62, blue: 0.47).opacity(0.36)
                             : Color(red: 0.56, green: 0.12, blue: 0.19).opacity(0.30),
-                        radius: 18,
+                        radius: 14,
                         x: 0,
-                        y: 10
+                        y: 8
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: [
@@ -58,23 +58,23 @@ struct PowerButton: View {
                                     endPoint: .center
                                 )
                             )
-                            .frame(width: 120, height: 56)
-                            .offset(x: -9, y: -34)
+                            .frame(width: 92, height: 42)
+                            .offset(x: -7, y: -26)
                             .blendMode(.screen)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .fill(coreGradient)
-                            .frame(width: 108, height: 108)
-                            .shadow(color: Color.black.opacity(0.20), radius: 8, x: 0, y: 6)
+                            .frame(width: 82, height: 82)
+                            .shadow(color: Color.black.opacity(0.20), radius: 6, x: 0, y: 4)
                     )
                     .scaleEffect(isPressed ? 0.94 : 1.0)
                     .offset(y: isPressed ? 1.2 : 0.0)
 
                 Image(systemName: "power")
-                    .font(.system(size: 46, weight: .heavy))
+                    .font(.system(size: 34, weight: .heavy))
                     .foregroundColor(iconColor)
-                    .shadow(color: iconShadowColor, radius: 4, x: 0, y: 2)
+                    .shadow(color: iconShadowColor, radius: 3, x: 0, y: 2)
                     .scaleEffect(isPressed ? 0.92 : 1.0)
             }
         }
