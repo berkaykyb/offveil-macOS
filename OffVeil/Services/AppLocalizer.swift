@@ -49,6 +49,11 @@ enum L10nKey: String {
     case themeSection
     case themeEnergy
     case themeClassic
+
+    case updateAvailable
+    case updateDownloading
+    case updateInstalling
+    case upToDate
 }
 
 struct AppLocalizer {
@@ -107,7 +112,12 @@ struct AppLocalizer {
 
             .themeSection: "Theme",
             .themeEnergy: "Energy",
-            .themeClassic: "Classic"
+            .themeClassic: "Classic",
+
+            .updateAvailable: "Update Available",
+            .updateDownloading: "Downloading...",
+            .updateInstalling: "Installing...",
+            .upToDate: "Up to date"
         ],
         .tr: [
             .settingsTitle: "Ayarlar",
@@ -157,7 +167,12 @@ struct AppLocalizer {
 
             .themeSection: "Tema",
             .themeEnergy: "Enerji",
-            .themeClassic: "Klasik"
+            .themeClassic: "Klasik",
+
+            .updateAvailable: "Guncelleme Mevcut",
+            .updateDownloading: "Indiriliyor...",
+            .updateInstalling: "Kuruluyor...",
+            .upToDate: "Guncel"
         ]
     ]
 }

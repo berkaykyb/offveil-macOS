@@ -71,9 +71,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         guard let button = statusItem?.button, let popover = popover else { return }
         guard !popover.isShown else { return }
 
-        // Her açılışta içeriği yenile: ayarlar ekranında takılı kalmasın.
-        refreshPopoverContent()
+        // Content is created once in applicationDidFinishLaunching.
+        // No rebuild needed — SwiftUI view resets via onDisappear / onAppear.
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        NotificationCenter.default.post(name: .offveilPopoverDidOpen, object: nil)
         installEventMonitors()
     }
 

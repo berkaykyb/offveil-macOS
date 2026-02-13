@@ -14,9 +14,8 @@ struct MenuBarPopoverView: View {
     @State private var errorMessage: String?
     @State private var showSettings = false
     @StateObject private var ispManager = ISPManager.shared
+    @StateObject private var updateManager = UpdateManager.shared
     @ObservedObject private var settings = SettingsManager.shared
-
-    private let updateURLString = "https://github.com/berkaykyb/offveil-macOS/releases"
     
     var body: some View {
         ZStack {
@@ -32,16 +31,17 @@ struct MenuBarPopoverView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: showSettings)
         .onAppear {
+            showSettings = false
             ispManager.detectISP()
             Task {
                 await refreshStatus()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .offveilPopoverDidOpen)) { _ in
+            showSettings = false
+        }
         .onChange(of: isActive) { _ in
             publishProtectionState()
-        }
-        .onDisappear {
-            showSettings = false
         }
     }
     
@@ -73,8 +73,8 @@ struct MenuBarPopoverView: View {
             }
             .padding(.top, 10)
 
-            if let errorMessage {
-                Text(errorMessage)
+            if let msg = errorMessage ?? updateManager.errorMessage {
+                Text(msg)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(Color(red: 0.96, green: 0.42, blue: 0.44))
                     .multilineTextAlignment(.center)
@@ -116,22 +116,6 @@ struct MenuBarPopoverView: View {
         .background(
             ThemedBackgroundView(isActive: isActive)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.24),
-                            Color.white.opacity(0.07)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .shadow(color: Color.black.opacity(0.32), radius: 28, x: 0, y: 18)
     }
 
     private var header: some View {
@@ -175,9 +159,51 @@ struct MenuBarPopoverView: View {
 
             Spacer()
 
-            Button(action: openUpdatesPage) {
+            updateButton
+        }
+    }
+
+    @ViewBuilder
+    private var updateButton: some View {
+        if updateManager.isDownloading {
+            // Downloading state — show progress
+            HStack(spacing: 6) {
+                ProgressView()
+                    .scaleEffect(0.6)
+                    .frame(width: 14, height: 14)
+                Text("\(Int(updateManager.downloadProgress * 100))%")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(secondaryTextColor)
+                    .monospacedDigit()
+            }
+        } else if updateManager.updateAvailable {
+            // Update ready to download
+            Button(action: {
+                Task { await updateManager.downloadAndInstall() }
+            }) {
                 HStack(spacing: 5) {
-                    Image(systemName: "arrow.down.circle")
+                    Image(systemName: "arrow.down.to.line.compact")
+                    Text(localized(.updateAvailable))
+                }
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(Color(red: 0.09, green: 0.90, blue: 0.58))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            }
+            .buttonStyle(PlainButtonStyle())
+        } else {
+            // Default: check for updates
+            Button(action: {
+                Task { await updateManager.checkForUpdate() }
+            }) {
+                HStack(spacing: 5) {
+                    if updateManager.isChecking {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 14, height: 14)
+                    } else {
+                        Image(systemName: "arrow.down.circle")
+                    }
                     Text(localized(.checkUpdates))
                 }
                 .font(.system(size: 12, weight: .semibold))
@@ -186,7 +212,7 @@ struct MenuBarPopoverView: View {
                 .fixedSize(horizontal: true, vertical: false)
             }
             .buttonStyle(PlainButtonStyle())
-            .disabled(isProcessing)
+            .disabled(isProcessing || updateManager.isChecking)
         }
     }
 
@@ -303,13 +329,6 @@ struct MenuBarPopoverView: View {
         isActive = false
         publishProtectionState()
         await refreshStatus()
-    }
-
-    private func openUpdatesPage() {
-        guard let url = URL(string: updateURLString) else {
-            return
-        }
-        NSWorkspace.shared.open(url)
     }
 
     @MainActor

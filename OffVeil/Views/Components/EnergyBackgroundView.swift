@@ -15,6 +15,7 @@ struct EnergyBackgroundView: View {
 
     @State private var phase: CGFloat = 0
     @State private var pulse: CGFloat = 0
+    @State private var isAnimating = false
 
     private var accentColor: Color {
         isActive
@@ -52,7 +53,7 @@ struct EnergyBackgroundView: View {
             )
             .animation(.easeInOut(duration: 0.8), value: isActive)
 
-            // Energy veins layer
+            // Energy veins layer (single draw + glow combined)
             EnergyVeinsShape(phase: phase)
                 .stroke(
                     LinearGradient(
@@ -69,16 +70,16 @@ struct EnergyBackgroundView: View {
                 .blur(radius: 0.6)
                 .animation(.easeInOut(duration: 0.8), value: isActive)
 
-            // Glow duplicate for bloom effect
+            // Bloom glow for primary veins
             EnergyVeinsShape(phase: phase)
                 .stroke(
                     accentColor.opacity(0.18 + pulse * 0.10),
                     style: StrokeStyle(lineWidth: 3.0, lineCap: .round)
                 )
-                .blur(radius: 6)
+                .blur(radius: 5)
                 .animation(.easeInOut(duration: 0.8), value: isActive)
 
-            // Secondary vein set (rotated)
+            // Secondary vein set
             EnergyVeinsShapeAlt(phase: phase * 0.7)
                 .stroke(
                     LinearGradient(
@@ -95,33 +96,20 @@ struct EnergyBackgroundView: View {
                 .blur(radius: 0.4)
                 .animation(.easeInOut(duration: 0.8), value: isActive)
 
-            // Bloom for secondary veins
-            EnergyVeinsShapeAlt(phase: phase * 0.7)
-                .stroke(
-                    accentColor.opacity(0.10 + pulse * 0.06),
-                    style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
-                )
-                .blur(radius: 5)
-                .animation(.easeInOut(duration: 0.8), value: isActive)
-
             // Corner accent glow - top left
             Circle()
-                .fill(
-                    accentColor.opacity(0.12 + pulse * 0.05)
-                )
+                .fill(accentColor.opacity(0.12 + pulse * 0.05))
                 .frame(width: 180, height: 180)
                 .offset(x: -120, y: -180)
-                .blur(radius: 30)
+                .blur(radius: 25)
                 .animation(.easeInOut(duration: 0.8), value: isActive)
 
             // Corner accent glow - bottom right
             Circle()
-                .fill(
-                    accentSecondary.opacity(0.08 + pulse * 0.04)
-                )
+                .fill(accentSecondary.opacity(0.08 + pulse * 0.04))
                 .frame(width: 140, height: 140)
                 .offset(x: 120, y: 160)
-                .blur(radius: 25)
+                .blur(radius: 20)
                 .animation(.easeInOut(duration: 0.8), value: isActive)
 
             // Top edge light streak
@@ -142,13 +130,30 @@ struct EnergyBackgroundView: View {
                 .blur(radius: 2)
         }
         .onAppear {
-            withAnimation(.linear(duration: 6.0).repeatForever(autoreverses: false)) {
-                phase = 1.0
-            }
-            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                pulse = 1.0
-            }
+            startAnimations()
         }
+        .onDisappear {
+            stopAnimations()
+        }
+        .drawingGroup() // Flatten layers into single GPU texture
+    }
+
+    private func startAnimations() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        withAnimation(.linear(duration: 10.0).repeatForever(autoreverses: false)) {
+            phase = 1.0
+        }
+        withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
+            pulse = 1.0
+        }
+    }
+
+    private func stopAnimations() {
+        isAnimating = false
+        // Reset animation state so it restarts cleanly on next appear
+        phase = 0
+        pulse = 0
     }
 }
 
