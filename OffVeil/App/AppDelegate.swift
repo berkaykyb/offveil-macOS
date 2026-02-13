@@ -138,28 +138,39 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         button.imagePosition = .imageOnly
 
         if let image = loadStatusIcon(isActive: isActive) {
-            image.size = NSSize(width: 18, height: 18)
+            // Menü bar yüksekliği 18pt. Orijinal oranı koruyarak ölçekle.
+            let menuBarHeight: CGFloat = 18
+            let aspectRatio = image.size.width / max(image.size.height, 1)
+            let scaledWidth = menuBarHeight * aspectRatio
+            image.size = NSSize(width: scaledWidth, height: menuBarHeight)
             image.isTemplate = false
             button.image = image
-            return
+        } else {
+            let fallback = NSImage(
+                systemSymbolName: isActive ? "shield.fill" : "shield",
+                accessibilityDescription: "OffVeil"
+            )
+            fallback?.isTemplate = true
+            button.image = fallback
         }
-
-        let fallback = NSImage(
-            systemSymbolName: isActive ? "shield.fill" : "shield",
-            accessibilityDescription: "OffVeil"
-        )
-        fallback?.isTemplate = true
-        button.image = fallback
     }
 
     private func loadStatusIcon(isActive: Bool) -> NSImage? {
-        let imageName = isActive ? "OffVeilLogoActive" : "OffVeilLogoInactive"
+        let fileName = isActive ? "menubar_active" : "menubar_inactive"
 
-        if let image = NSImage(named: NSImage.Name(imageName)) {
-            return image
+        // engine/ klasöründen doğrudan yükle (folder reference — garantili kopyalanır)
+        if let resourcePath = Bundle.main.resourcePath {
+            let fullPath = (resourcePath as NSString)
+                .appendingPathComponent("engine")
+                .appending("/\(fileName).png")
+            if let image = NSImage(contentsOfFile: fullPath) {
+                return image
+            }
         }
 
-        if let image = Bundle.main.image(forResource: NSImage.Name(imageName)) {
+        // Asset catalog fallback
+        let catalogName = isActive ? "OffVeilLogoActive" : "OffVeilLogoInactive"
+        if let image = NSImage(named: NSImage.Name(catalogName)) {
             return image
         }
 
