@@ -74,7 +74,12 @@ class EngineService {
     }
 
     func executeCommand(_ command: String) async -> Result<[String: Any], Error> {
-        return executeCommandSync(command)
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                let result = executeCommandSync(command)
+                continuation.resume(returning: result)
+            }
+        }
     }
     
     func getStatus() async -> Result<[String: Any], Error> {

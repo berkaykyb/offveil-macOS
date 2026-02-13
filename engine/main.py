@@ -387,11 +387,13 @@ def _flush_dns_cache():
     try:
         subprocess.run(
             ["dscacheutil", "-flushcache"],
-            capture_output=True, check=False
+            capture_output=True, check=False, timeout=5
         )
+        # killall -HUP mDNSResponder without sudo — works if the process
+        # allows the signal from the current user; silently ignored otherwise.
         subprocess.run(
-            ["sudo", "killall", "-HUP", "mDNSResponder"],
-            capture_output=True, check=False
+            ["killall", "-HUP", "mDNSResponder"],
+            capture_output=True, check=False, timeout=5
         )
     except Exception:
         pass

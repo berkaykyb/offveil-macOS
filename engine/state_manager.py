@@ -7,6 +7,7 @@ STATE_FILE = os.path.expanduser("~/.offveil_state.json")
 def save_state(data):
     with open(STATE_FILE, 'w') as f:
         json.dump(data, f, indent=2)
+    os.chmod(STATE_FILE, 0o600)  # Owner read/write only
 
 
 def load_state():

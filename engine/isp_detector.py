@@ -33,6 +33,7 @@ def _write_cache(data):
         }
         with open(CACHE_FILE, "w") as f:
             json.dump(payload, f)
+        os.chmod(CACHE_FILE, 0o600)  # Owner read/write only
     except Exception:
         pass
 
@@ -45,21 +46,21 @@ def detect_isp(force_refresh=False):
             return cached
 
     try:
-        # IP-API.com kullan (günde 45 istek limiti var ama cache yapacağız)
-        url = "http://ip-api.com/json/?fields=status,country,isp,as,org,query"
+        # Use HTTPS API for privacy
+        url = "https://ipwho.is/"
         
         with urllib.request.urlopen(url, timeout=5) as response:
             data = json.loads(response.read().decode())
             
-            if data.get('status') == 'success':
-                isp_raw = data.get('isp', 'Unknown')
+            if data.get('success', False):
+                isp_raw = data.get('connection', {}).get('isp', 'Unknown')
                 result = {
                     'success': True,
-                    'ip': data.get('query', 'Unknown'),
+                    'ip': data.get('ip', 'Unknown'),
                     'isp': isp_raw,
                     'normalized_isp': normalize_isp_name(isp_raw),
-                    'org': data.get('org', 'Unknown'),
-                    'asn': data.get('as', 'Unknown'),
+                    'org': data.get('connection', {}).get('org', 'Unknown'),
+                    'asn': str(data.get('connection', {}).get('asn', 'Unknown')),
                     'country': data.get('country', 'Unknown'),
                     'source': 'api',
                 }
