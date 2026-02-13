@@ -34,24 +34,9 @@ struct SettingsView: View {
         }
         .frame(width: 320, height: 450)
         .background(ThemedBackgroundView(isActive: isActive))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onAppear {
             pendingLanguage = settings.appLanguage
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.22),
-                            Color.white.opacity(0.06)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
     }
 
     private var settingsHeader: some View {
