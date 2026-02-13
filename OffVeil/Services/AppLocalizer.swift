@@ -38,6 +38,7 @@ enum L10nKey: String {
     case connectionSecured
     case tapToEnable
     case cleanup
+    case cleanupConfirm
     case checkUpdates
     case operationFailed
     case resetFailed
@@ -54,6 +55,11 @@ enum L10nKey: String {
     case updateDownloading
     case updateInstalling
     case upToDate
+
+    case notifProtectionOn
+    case notifProtectionOff
+    case notifProtectionOnBody
+    case notifProtectionOffBody
 }
 
 struct AppLocalizer {
@@ -100,8 +106,9 @@ struct AppLocalizer {
             .protectionActive: "Protection Active",
             .protectionInactive: "Protection Inactive",
             .connectionSecured: "Your connection is secured",
-            .tapToEnable: "Tap to enable protection",
+            .tapToEnable: "Click to enable protection",
             .cleanup: "Cleanup",
+            .cleanupConfirm: "Are you sure?",
             .checkUpdates: "Check for Updates",
             .operationFailed: "Operation failed",
             .resetFailed: "Reset failed",
@@ -117,62 +124,73 @@ struct AppLocalizer {
             .updateAvailable: "Update Available",
             .updateDownloading: "Downloading...",
             .updateInstalling: "Installing...",
-            .upToDate: "Up to date"
+            .upToDate: "Up to date",
+
+            .notifProtectionOn: "Protection Enabled",
+            .notifProtectionOff: "Protection Disabled",
+            .notifProtectionOnBody: "Your connection is now secured.",
+            .notifProtectionOffBody: "Protection has been turned off."
         ],
         .tr: [
             .settingsTitle: "Ayarlar",
-            .aboutTitle: "Hakkinda",
-            .openSourceLicensesTitle: "Acik Kaynak Lisanslari",
+            .aboutTitle: "Hakkında",
+            .openSourceLicensesTitle: "Açık Kaynak Lisansları",
 
-            .startupSection: "Baslangic",
-            .launchAtLoginTitle: "Giriste Baslat",
-            .launchAtLoginSubtitle: "macOS acildiginda OffVeil baslasin",
-            .autoActiveTitle: "Acilista Otomatik Aktif",
-            .autoActiveSubtitle: "Baslangicta korumayi otomatik ac",
-            .startHiddenTitle: "Gizli Baslat",
-            .startHiddenSubtitle: "Sadece menu barda acilsin",
+            .startupSection: "Başlangıç",
+            .launchAtLoginTitle: "Girişte Başlat",
+            .launchAtLoginSubtitle: "macOS açıldığında OffVeil başlasın",
+            .autoActiveTitle: "Açılışta Otomatik Aktif",
+            .autoActiveSubtitle: "Başlangıçta korumayı otomatik aç",
+            .startHiddenTitle: "Gizli Başlat",
+            .startHiddenSubtitle: "Sadece menü barda açılsın",
 
             .languageSection: "Dil",
             .appLanguageTitle: "Uygulama Dili",
             .applyLanguageButton: "Dili Uygula",
 
             .infoSection: "Bilgi",
-            .aboutRowTitle: "Hakkinda",
-            .aboutRowSubtitle: "Surum, emek verenler ve yasal bilgiler",
+            .aboutRowTitle: "Hakkında",
+            .aboutRowSubtitle: "Sürüm, emek verenler ve yasal bilgiler",
 
             .applicationSection: "Uygulama",
-            .secureTunnel: "Guvenli Tunel",
-            .versionLabel: "Surum",
+            .secureTunnel: "Güvenli Tünel",
+            .versionLabel: "Sürüm",
             .buildLabel: "Build",
 
             .legalSection: "Yasal",
-            .openSourceRowTitle: "Acik Kaynak Lisanslari",
-            .openSourceRowSubtitle: "Ucuncu taraf bilesenler ve lisanslar",
+            .openSourceRowTitle: "Açık Kaynak Lisansları",
+            .openSourceRowSubtitle: "Üçüncü taraf bileşenler ve lisanslar",
 
-            .openSourceSection: "Acik Kaynak",
-            .spoofDpiBody: "OffVeil mevcut surumlerde erisim yonlendirmesi icin SpoofDPI kullanir. Lisans ve atif detaylari burada listelenecek.",
+            .openSourceSection: "Açık Kaynak",
+            .spoofDpiBody: "OffVeil mevcut sürümlerde erişim yönlendirmesi için SpoofDPI kullanır. Lisans ve atıf detayları burada listelenecek.",
 
             .protectionActive: "Koruma Aktif",
             .protectionInactive: "Koruma Pasif",
-            .connectionSecured: "Baglantiniz guvende",
-            .tapToEnable: "Koruma icin dokunun",
+            .connectionSecured: "Bağlantınız güvende",
+            .tapToEnable: "Korumayı etkinleştirmek için tıklayın",
             .cleanup: "Temizle",
-            .checkUpdates: "Guncellemeleri kontrol et",
-            .operationFailed: "Islem basarisiz",
-            .resetFailed: "Sifirlama basarisiz",
+            .cleanupConfirm: "Emin misiniz?",
+            .checkUpdates: "Güncellemeleri kontrol et",
+            .operationFailed: "İşlem başarısız",
+            .resetFailed: "Sıfırlama başarısız",
 
-            .ispDetecting: "Algilaniyor...",
+            .ispDetecting: "Algılanıyor...",
             .ispUnknown: "Bilinmiyor",
-            .ispDetectionFailed: "Algilama basarisiz",
+            .ispDetectionFailed: "Algılama başarısız",
 
             .themeSection: "Tema",
             .themeEnergy: "Enerji",
             .themeClassic: "Klasik",
 
-            .updateAvailable: "Guncelleme Mevcut",
-            .updateDownloading: "Indiriliyor...",
+            .updateAvailable: "Güncelleme Mevcut",
+            .updateDownloading: "İndiriliyor...",
             .updateInstalling: "Kuruluyor...",
-            .upToDate: "Guncel"
+            .upToDate: "Güncel",
+
+            .notifProtectionOn: "Koruma Etkinleştirildi",
+            .notifProtectionOff: "Koruma Devre Dışı",
+            .notifProtectionOnBody: "Bağlantınız artık güvende.",
+            .notifProtectionOffBody: "Koruma kapatıldı."
         ]
     ]
 }
