@@ -83,6 +83,8 @@ def main():
         handle_cleanup()
     elif command == "check_and_restore":
         handle_check_and_restore()
+    elif command == "rebind_proxy":
+        handle_rebind_proxy()
     elif command == "detect_isp":
         handle_detect_isp()
     else:
@@ -506,6 +508,95 @@ def handle_check_and_restore():
 
     except Exception as e:
         error_response(f"Check and restore failed: {str(e)}")
+
+
+def handle_rebind_proxy():
+    """
+    Re-apply active proxy binding after network transitions (sleep/wake, Wi-Fi switch).
+    Keeps protection active; does NOT stop SpoofDPI or clear state.
+    """
+    try:
+        if not state_manager.is_active():
+            response = {
+                "success": True,
+                "message": "Protection is inactive, nothing to rebind",
+                "action": "none",
+            }
+            print(json.dumps(response))
+            return
+
+        state = state_manager.load_state()
+        if not state:
+            error_response("Active state missing")
+            return
+
+        old_interface = state.get("active_interface")
+        access_pid = state.get("access_pid")
+        proxy_host = state.get("proxy_host")
+        proxy_port = state.get("proxy_port")
+
+        if not access_pid or not access_manager.is_process_running(access_pid):
+            error_response("Access process is not running")
+            return
+
+        if not proxy_host or not proxy_port:
+            error_response("Invalid active state: proxy host/port missing")
+            return
+
+        new_interface = dns_manager.get_primary_service()
+        if not new_interface:
+            error_response("No active network service found")
+            return
+
+        interface_changed = old_interface != new_interface
+        restore_old_success = True
+        warning = None
+
+        original_proxy_state = state.get("original_proxy_state")
+        if interface_changed:
+            new_original_proxy_state = proxy_manager.capture_proxy_state(new_interface)
+            if new_original_proxy_state is None:
+                error_response(
+                    f"Failed to capture proxy state for new interface {new_interface}"
+                )
+                return
+
+            if old_interface:
+                restore_old_success = proxy_manager.restore_proxy_state(
+                    old_interface, original_proxy_state
+                )
+
+            original_proxy_state = new_original_proxy_state
+
+        proxy_applied = proxy_manager.set_system_proxy(
+            new_interface, proxy_host, proxy_port
+        )
+        if not proxy_applied:
+            error_response(f"Failed to apply proxy on {new_interface}")
+            return
+
+        if interface_changed:
+            state["active_interface"] = new_interface
+            state["original_proxy_state"] = original_proxy_state
+            state["timestamp"] = datetime.now().isoformat()
+            state_manager.save_state(state)
+
+        if not restore_old_success and interface_changed:
+            warning = f"Could not restore previous interface {old_interface}"
+
+        response = {
+            "success": True,
+            "message": "Proxy rebound successfully" if interface_changed else "Proxy already bound",
+            "action": "rebound" if interface_changed else "verified",
+            "interface": new_interface,
+            "previous_interface": old_interface,
+            "warning": warning,
+            "timestamp": datetime.now().isoformat(),
+        }
+        print(json.dumps(response))
+
+    except Exception as e:
+        error_response(f"Rebind proxy failed: {str(e)}")
 
 
 def error_response(message):
