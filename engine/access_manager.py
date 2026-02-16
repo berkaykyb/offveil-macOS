@@ -35,6 +35,9 @@ UNIVERSAL_CONFIG = {
     # (unlike "sni" which only splits at the SNI boundary — insufficient for aggressive DPI)
     "https_split_mode": "chunk",
     "https_chunk_size": 2,
+    # Auto-detect blocked sites and apply bypass only where needed
+    # Adapts to any ISP's DPI without manual configuration
+    "policy_auto": True,
     "timeout": 5000,
 }
 
@@ -79,6 +82,7 @@ def _build_command(host, port):
         "--dns-https-url", UNIVERSAL_CONFIG["doh_url"],
         "--https-split-mode", UNIVERSAL_CONFIG["https_split_mode"],
         "--https-chunk-size", str(UNIVERSAL_CONFIG["https_chunk_size"]),
+        "--policy-auto",
         "--timeout", str(UNIVERSAL_CONFIG["timeout"]),
     ]
     return command
