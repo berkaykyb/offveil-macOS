@@ -239,16 +239,21 @@ def handle_deactivate():
         if access_pid:
             process_stopped = access_manager.stop_access_process(access_pid)
 
-        # 3. Clear state
+        if not proxy_restored or not process_stopped:
+            errors = []
+            if not proxy_restored:
+                errors.append("failed to restore system proxy")
+            if not process_stopped:
+                errors.append(f"failed to stop access process pid={access_pid}")
+            # Keep state for retry/recovery. Do not clear on partial failure.
+            error_response(
+                "Deactivation incomplete, state preserved for retry: "
+                + "; ".join(errors)
+            )
+            return
+
+        # 3. Clear state only after all deactivation steps succeed
         state_manager.clear_state()
-
-        if not proxy_restored:
-            error_response("Failed to restore system proxy")
-            return
-
-        if not process_stopped:
-            error_response(f"Failed to stop access process pid={access_pid}")
-            return
 
         response = {
             "success": True,
