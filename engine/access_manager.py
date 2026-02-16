@@ -30,6 +30,12 @@ UNIVERSAL_CONFIG = {
     "dns_mode": "https",
     "dns_qtype": "ipv4",
     "doh_url": "https://cloudflare-dns.com/dns-query",
+    # Chunk-based ClientHello splitting to bypass SNI inspection
+    # "chunk" mode splits the entire TLS ClientHello into N-byte pieces
+    # (unlike "sni" which only splits at the SNI boundary — insufficient for aggressive DPI)
+    "https_split_mode": "chunk",
+    "https_chunk_size": 2,
+    "timeout": 5000,
 }
 
 
@@ -71,6 +77,9 @@ def _build_command(host, port):
         "--dns-qtype", UNIVERSAL_CONFIG["dns_qtype"],
         "--dns-cache",
         "--dns-https-url", UNIVERSAL_CONFIG["doh_url"],
+        "--https-split-mode", UNIVERSAL_CONFIG["https_split_mode"],
+        "--https-chunk-size", str(UNIVERSAL_CONFIG["https_chunk_size"]),
+        "--timeout", str(UNIVERSAL_CONFIG["timeout"]),
     ]
     return command
 
