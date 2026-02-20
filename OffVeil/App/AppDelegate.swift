@@ -209,32 +209,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
     
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // Run cleanup on a background thread with a hard timeout.
-        let semaphore = DispatchSemaphore(value: 0)
         DispatchQueue.global(qos: .userInitiated).async {
             self.restoreSystemOnExit()
-            semaphore.signal()
-        }
-        // Wait at most 5 seconds — never hang the quit process.
-        _ = semaphore.wait(timeout: .now() + 5.0)
-        return .terminateNow
-    }
-    
-    private func restoreSystemOnExit() {
-        // Önce normal kapatma komutunu dene.
-        _ = EngineService.shared.executeCommandSync("deactivate")
-
-        // Sonra orphaned state/proxy/process kaldıysa garanti cleanup yap.
-        let restoreResult = EngineService.shared.executeCommandSync("check_and_restore")
-        switch restoreResult {
-        case .success(let data):
-            if let action = data["action"] as? String, action == "restored" {
-                print("Exit cleanup: system settings restored")
+            DispatchQueue.main.async {
+                NSApplication.shared.reply(toApplicationShouldTerminate: true)
             }
-        case .failure(let error):
-            print("Exit cleanup error:", error)
         }
+        // Give cleanup up to 5 seconds, then macOS will force-terminate anyway.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            NSApplication.shared.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
+
+    private func restoreSystemOnExit() {
+        _ = EngineService.shared.executeCommandSync("deactivate")
+        _ = EngineService.shared.executeCommandSync("check_and_restore")
+    }
+
+
 
     private func applyStartupPreferences() {
         guard settings.launchAtLogin else {
