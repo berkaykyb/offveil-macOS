@@ -21,6 +21,13 @@ import time
 from pathlib import Path
 
 
+_LOG_DIR = Path.home() / "Library" / "Logs" / "OffVeil"
+
+
+def _ensure_log_dir():
+    _LOG_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 18080
 READY_TIMEOUT_MS = 5000
@@ -127,16 +134,17 @@ def start_access_process(host=None, port=None):
         }
 
     try:
-        log_path = f"/tmp/offveil-access-{int(time.time() * 1000)}.log"
-        log_file = open(log_path, "ab")
+        _ensure_log_dir()
+        log_path = str(_LOG_DIR / f"access-{int(time.time() * 1000)}.log")
 
-        process = subprocess.Popen(
-            command,
-            stdout=log_file,
-            stderr=log_file,
-            start_new_session=True,
-        )
-        log_file.close()
+        with open(log_path, "ab") as log_file:
+            os.chmod(log_path, 0o600)
+            process = subprocess.Popen(
+                command,
+                stdout=log_file,
+                stderr=log_file,
+                start_new_session=True,
+            )
 
         ready, reason = _wait_for_process_ready(process, host, port)
         if not ready:
