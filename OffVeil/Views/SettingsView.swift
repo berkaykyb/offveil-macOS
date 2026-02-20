@@ -205,7 +205,7 @@ struct SettingsView: View {
     }
 
     private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+        return "Beta"
     }
 
     private var appBuild: String {
