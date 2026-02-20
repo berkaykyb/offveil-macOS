@@ -143,7 +143,6 @@ class UpdateManager: ObservableObject {
     // MARK: - Download
 
     private func downloadDMG(from url: URL) async throws -> URL {
-        // Use Application Support for user-private download location (not world-readable /tmp)
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let tempDir = appSupport
             .appendingPathComponent("OffVeil", isDirectory: true)
@@ -154,10 +153,11 @@ class UpdateManager: ObservableObject {
 
         let destination = tempDir.appendingPathComponent("OffVeil.dmg")
 
-        // Use delegate-based download for progress tracking
         let delegate = DownloadDelegate()
         let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         let request = URLRequest(url: url)
+
+        defer { session.finishTasksAndInvalidate() }
 
         return try await withCheckedThrowingContinuation { continuation in
             delegate.onProgress = { [weak self] progress in
@@ -324,19 +324,20 @@ class UpdateManager: ObservableObject {
     }
 
     private func relaunchApp(at appURL: URL) {
-        // Use /usr/bin/open with proper argument passing (no shell interpolation)
+        // Mark that we're relaunching after an update so the new version can
+        // auto-activate protection on launch.
+        UserDefaults.standard.set(true, forKey: "pendingRelaunchActivation")
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         process.arguments = ["-g", "--fresh", appURL.path]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
 
-        // Launch after a short delay to let the current process begin terminating
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
             try? process.run()
         }
 
-        // Quit the current app
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApplication.shared.terminate(nil)
         }

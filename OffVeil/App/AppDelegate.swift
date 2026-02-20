@@ -19,7 +19,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let settings = SettingsManager.shared
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Menü bar item oluştur
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
@@ -28,7 +27,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             updateStatusItemIcon(isActive: false)
         }
         
-        // Popover oluştur
         popover = NSPopover()
         popover?.contentSize = NSSize(width: 320, height: 450)
         popover?.behavior = .semitransient
@@ -42,6 +40,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         NotificationService.shared.requestAuthorization()
         registerGlobalHotkey()
 
+        // If we relaunched after an update, re-activate protection automatically.
+        if UserDefaults.standard.bool(forKey: "pendingRelaunchActivation") {
+            UserDefaults.standard.removeObject(forKey: "pendingRelaunchActivation")
+            Task.detached { [weak self] in
+                _ = await EngineService.shared.executeCommand("activate")
+                await self?.refreshStatusItemIcon()
+            }
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self else { return }
             Task {
@@ -50,6 +57,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
     }
     
+
     @objc func statusItemClicked() {
         guard let popover = popover else { return }
 
