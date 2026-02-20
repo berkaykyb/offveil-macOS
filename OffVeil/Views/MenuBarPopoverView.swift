@@ -9,7 +9,7 @@ import SwiftUI
 import AppKit
 
 struct MenuBarPopoverView: View {
-    @State private var isActive = false
+    @State private var isActive = UserDefaults.standard.bool(forKey: "lastKnownProtectionState")
     @State private var isProcessing = false
     @State private var errorMessage: String?
     @State private var showSettings = false
@@ -366,6 +366,7 @@ struct MenuBarPopoverView: View {
         guard case .success(let data) = result else { return }
         guard data["success"] as? Bool == true else { return }
         isActive = (data["status"] as? String) == "active"
+        UserDefaults.standard.set(isActive, forKey: "lastKnownProtectionState")
         publishProtectionState()
     }
 }
