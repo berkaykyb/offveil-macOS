@@ -360,33 +360,40 @@ def handle_cleanup():
 def _kill_all_dpi_processes():
     """Kill any running spoofdpi or similar DPI bypass processes."""
     killed_count = 0
-    process_names = ["spoofdpi", "spoofDPI", "SpoofDPI", "goodbyedpi", "GoodbyeDPI"]
-    
-    for proc_name in process_names:
-        try:
-            result = subprocess.run(
-                ["pgrep", "-f", proc_name],
-                capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                pids = result.stdout.strip().split("\n")
-                for pid_str in pids:
-                    pid_str = pid_str.strip()
-                    if not pid_str:
-                        continue
-                    try:
-                        pid = int(pid_str)
-                        # Don't kill ourselves
-                        if pid == os.getpid():
-                            continue
-                        os.kill(pid, 9)
-                        killed_count += 1
-                    except (ValueError, ProcessLookupError, PermissionError):
-                        pass
-        except Exception:
-            pass
+    # Exact binary names to match — ps comm gives only the executable name,
+    # not the full command line, so unrelated processes can't be accidentally matched.
+    target_names = {"spoofdpi", "spoofDPI", "SpoofDPI", "goodbyedpi", "GoodbyeDPI"}
+    own_pid = os.getpid()
+
+    try:
+        result = subprocess.run(
+            ["ps", "-xo", "pid,comm"],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            return 0
+
+        for line in result.stdout.splitlines():
+            parts = line.strip().split(None, 1)
+            if len(parts) != 2:
+                continue
+            pid_str, comm = parts
+            # comm may include a path — check just the basename
+            if os.path.basename(comm) not in target_names:
+                continue
+            try:
+                pid = int(pid_str)
+                if pid == own_pid:
+                    continue
+                os.kill(pid, 9)
+                killed_count += 1
+            except (ValueError, ProcessLookupError, PermissionError):
+                pass
+    except Exception:
+        pass
 
     return killed_count
+
 
 
 def _flush_dns_cache():
