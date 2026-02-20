@@ -31,18 +31,37 @@ class EngineService {
         var env = ProcessInfo.processInfo.environment
         env["OFFVEIL_OWNER_PID"] = String(ProcessInfo.processInfo.processIdentifier)
         process.environment = env
-        
+
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
-        
+
         do {
             try process.run()
+
+            // Drain both pipes on background threads while the process runs.
+            // This prevents a deadlock: if the pipe buffer fills up, the child
+            // process blocks on write() waiting for a reader — while we'd be
+            // waiting on waitUntilExit(). Reading concurrently avoids that.
+            var stdoutData = Data()
+            var stderrData = Data()
+            let group = DispatchGroup()
+
+            group.enter()
+            DispatchQueue.global().async {
+                stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                group.leave()
+            }
+
+            group.enter()
+            DispatchQueue.global().async {
+                stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                group.leave()
+            }
+
             process.waitUntilExit()
-            
-            let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            group.wait()
 
             let stdout = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let stderr = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -72,6 +91,7 @@ class EngineService {
             return .failure(error)
         }
     }
+
 
     func executeCommand(_ command: String) async -> Result<[String: Any], Error> {
         return await withCheckedContinuation { continuation in
