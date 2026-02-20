@@ -103,6 +103,14 @@ def _tail_text(path, max_chars=800):
         return ""
 
 
+def _is_port_in_use(host, port):
+    try:
+        with socket.create_connection((host, int(port)), timeout=0.3):
+            return True
+    except Exception:
+        return False
+
+
 def _is_port_ready(host, port):
     try:
         with socket.create_connection((host, int(port)), timeout=0.2):
@@ -118,6 +126,7 @@ def _wait_for_process_ready(process, host, port):
             return False, "Access process terminated right after start"
         if _is_port_ready(host, port):
             return True, None
+
         time.sleep(0.1)
     return False, f"Access process did not become ready within {READY_TIMEOUT_MS}ms"
 
@@ -125,6 +134,12 @@ def _wait_for_process_ready(process, host, port):
 def start_access_process(host=None, port=None):
     host = host or DEFAULT_HOST
     port = port or DEFAULT_PORT
+
+    if _is_port_in_use(host, port):
+        return {
+            "success": False,
+            "error": f"Port {port} is already in use by another process. Close it and try again.",
+        }
 
     command = _build_command(host, port)
     if not command:
