@@ -12,7 +12,7 @@ import Network
 class NetworkMonitor {
     static let shared = NetworkMonitor()
 
-    private let monitor = NWPathMonitor()
+    private var monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.offveil.networkmonitor", qos: .utility)
     private var lastInterfaceTypes: Set<NWInterface.InterfaceType> = []
     private var isMonitoring = false
@@ -29,16 +29,17 @@ class NetworkMonitor {
         guard !isMonitoring else { return }
         isMonitoring = true
 
+        // NWPathMonitor cannot be restarted after cancel() — create a fresh instance.
+        monitor = NWPathMonitor()
+
         monitor.pathUpdateHandler = { [weak self] path in
             guard let self else { return }
 
             let currentTypes = Set(path.availableInterfaces.map(\.type))
 
-            // Only react if the set of interface types actually changed
             guard currentTypes != self.lastInterfaceTypes else { return }
             self.lastInterfaceTypes = currentTypes
 
-            // Only re-apply if protection is currently active
             self.reapplyIfActive()
         }
 
