@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 POLL_INTERVAL_SECONDS = 1.0
+MAX_RESTORE_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 2.0
 STATE_FILE = os.path.expanduser("~/Library/Application Support/OffVeil/state.json")
 
 
@@ -28,6 +30,22 @@ def _is_pid_alive(pid):
         return True
     except Exception:
         return False
+
+
+def _run_restore(engine_main):
+    try:
+        result = subprocess.run(
+            ["/usr/bin/python3", str(engine_main), "check_and_restore"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+        )
+        if result.returncode == 0 and result.stdout:
+            data = json.loads(result.stdout.decode())
+            return data.get("success", False)
+    except Exception:
+        pass
+    return False
 
 
 def main():
@@ -57,15 +75,13 @@ def main():
             time.sleep(POLL_INTERVAL_SECONDS)
             continue
 
-        try:
-            subprocess.run(
-                ["/usr/bin/python3", str(engine_main), "check_and_restore"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=30,
-            )
-        except Exception:
-            pass
+        # Owner process died — attempt restore with retries.
+        for attempt in range(1, MAX_RESTORE_ATTEMPTS + 1):
+            if _run_restore(engine_main):
+                return 0
+            if attempt < MAX_RESTORE_ATTEMPTS:
+                time.sleep(RETRY_DELAY_SECONDS)
+
         return 0
 
 
