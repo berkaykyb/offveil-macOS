@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 POLL_INTERVAL_SECONDS = 1.0
-STATE_FILE = os.path.expanduser("~/.offveil_state.json")
+STATE_FILE = os.path.expanduser("~/Library/Application Support/OffVeil/state.json")
 
 
 def _load_state():
