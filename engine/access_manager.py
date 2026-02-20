@@ -205,4 +205,11 @@ def stop_access_process(pid):
     except Exception:
         return False
 
-    return True
+    # Verify the process is actually dead after SIGKILL.
+    kill_deadline = time.time() + 1.0
+    while time.time() < kill_deadline:
+        if not is_process_running(pid):
+            return True
+        time.sleep(0.1)
+
+    return not is_process_running(pid)
