@@ -174,7 +174,13 @@ def set_system_proxy(interface, proxy_host, proxy_port):
             interval_ms=100,
         )
     except Exception:
+        # Partial failure — roll back to a clean disabled state.
+        try:
+            clear_system_proxy(interface)
+        except Exception:
+            pass
         return False
+
 
 
 def clear_system_proxy(interface):
