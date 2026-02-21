@@ -23,3 +23,6 @@ scripts/install_access_binary.sh
 *.xcuserstate
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+
+# Local Readme
+README_TR.md

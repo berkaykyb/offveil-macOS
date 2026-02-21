@@ -14,7 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var popover: NSPopover?
     private var globalEventMonitor: Any?
     private var localEventMonitor: Any?
-    private var hotkeyMonitor: Any?
+    private var localEventMonitor: Any?
     private var statusChangeObserver: NSObjectProtocol?
     private let settings = SettingsManager.shared
     
@@ -38,7 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         NetworkMonitor.shared.startMonitoring()
         UpdateManager.shared.startPeriodicChecks()
         NotificationService.shared.requestAuthorization()
-        registerGlobalHotkey()
+        NotificationService.shared.requestAuthorization()
 
         // If we relaunched after an update, re-activate protection automatically.
         if UserDefaults.standard.bool(forKey: "pendingRelaunchActivation") {
@@ -158,6 +158,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             image.isTemplate = true
             button.image = image
             // Active = full opacity, inactive = dimmed
+            
             button.alphaValue = isActive ? 1.0 : 0.45
         } else {
             let fallback = NSImage(
@@ -271,23 +272,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if let observer = statusChangeObserver {
             NotificationCenter.default.removeObserver(observer)
         }
-        if let monitor = hotkeyMonitor {
-            NSEvent.removeMonitor(monitor)
+        if let observer = statusChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
-    // MARK: - Global Hotkey (⌘⇧O)
 
-    private func registerGlobalHotkey() {
-        hotkeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            // ⌘⇧O — Command + Shift + O
-            guard event.modifierFlags.contains([.command, .shift]),
-                  event.charactersIgnoringModifiers?.lowercased() == "o" else {
-                return
-            }
-            DispatchQueue.main.async {
-                self?.statusItemClicked()
-            }
-        }
-    }
 }
