@@ -92,7 +92,7 @@ class SettingsManager: ObservableObject {
            let parsedTheme = AppTheme(rawValue: savedTheme) {
             self.appTheme = parsedTheme
         } else {
-            self.appTheme = .energy
+            self.appTheme = .classic
         }
 
         if !launchAtLogin {
