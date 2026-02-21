@@ -150,7 +150,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         if let image = loadStatusIcon(isActive: isActive) {
             // Menü bar yüksekliği 18pt. Orijinal oranı koruyarak ölçekle.
-            let menuBarHeight: CGFloat = 18
+            let menuBarHeight: CGFloat = 15
             let aspectRatio = image.size.width / max(image.size.height, 1)
             let scaledWidth = menuBarHeight * aspectRatio
             image.size = NSSize(width: scaledWidth, height: menuBarHeight)
