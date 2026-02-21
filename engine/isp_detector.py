@@ -60,9 +60,10 @@ def _write_cache(data):
 
 
 def _fetch_isp():
-    url = "https://ipwho.is/"
+    # ip-api.com returns clean ISP names directly
+    url = "http://ip-api.com/json/?fields=status,isp,org,as,query,country"
 
-    # Build a request that bypasses the system proxy so that ISP detection is
+    # Bypass the system proxy so that ISP detection is
     # not routed through SpoofDPI (which would return the wrong ISP).
     no_proxy_handler = urllib.request.ProxyHandler({})
     opener = urllib.request.build_opener(no_proxy_handler)
@@ -81,15 +82,15 @@ def detect_isp(force_refresh=False):
     try:
         data = _fetch_isp()
 
-        if data.get("success", False):
-            isp_raw = data.get("connection", {}).get("isp", "Unknown")
+        if data.get("status") == "success":
+            isp_raw = data.get("isp", "Unknown")
             result = {
                 "success": True,
-                "ip": data.get("ip", "Unknown"),
+                "ip": data.get("query", "Unknown"),
                 "isp": isp_raw,
                 "normalized_isp": normalize_isp_name(isp_raw),
-                "org": data.get("connection", {}).get("org", "Unknown"),
-                "asn": str(data.get("connection", {}).get("asn", "Unknown")),
+                "org": data.get("org", "Unknown"),
+                "asn": data.get("as", "Unknown"),
                 "country": data.get("country", "Unknown"),
                 "source": "api",
             }
@@ -116,23 +117,44 @@ def detect_isp(force_refresh=False):
 
 
 def normalize_isp_name(isp_name):
+    """Clean ISP name for display. TR ISPs get short names, others get suffix cleanup."""
     isp_lower = isp_name.lower()
 
-    if (
-        "turk telekom" in isp_lower
-        or "ttnet" in isp_lower
-        or "avea" in isp_lower
-        or "tt mobil" in isp_lower
-        or "turk telekom mobil" in isp_lower
-    ):
-        return "Türk Telekom"
-    elif "turksat" in isp_lower:
-        return "Türksat"
-    elif "superonline" in isp_lower:
-        return "Superonline"
-    elif "vodafone" in isp_lower:
-        return "Vodafone"
-    elif "turkcell" in isp_lower:
-        return "Turkcell"
-    else:
-        return isp_name
+    # Turkish ISPs — short display names (API returns ugly corporate names)
+    tr_map = {
+        "turk telekom": "Türk Telekom",
+        "ttnet": "Türk Telekom",
+        "turksat": "Türksat",
+        "superonline": "Superonline",
+        "vodafone": "Vodafone TR",
+        "turkcell": "Turkcell",
+        "millenicom": "Millenicom",
+        "pttcell": "PTTCell",
+        "kablonet": "Kablonet",
+        "turknet": "TurkNet",
+    }
+    for keyword, display_name in tr_map.items():
+        if keyword in isp_lower:
+            return display_name
+
+    # Everyone else — strip corporate suffixes
+    cleaned = isp_name.strip()
+    for suffix in [
+        " Telekomunikasyon Anonim Sirketi",
+        " Iletisim Hizmetleri Anonim Sirketi",
+        " Anonim Sirketi",
+        " Telecommunications",
+        " Communications",
+        " Corporation",
+        " Holdings",
+        " A.S.", " Ltd.", " Inc.", " LLC", " GmbH", " S.A.",
+    ]:
+        if cleaned.endswith(suffix):
+            candidate = cleaned[: -len(suffix)].strip()
+            if len(candidate) >= 5:
+                cleaned = candidate
+            break
+
+    return cleaned
+
+
