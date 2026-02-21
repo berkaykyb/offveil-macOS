@@ -3,31 +3,62 @@ import Foundation
 class EngineService {
     static let shared = EngineService()
     
-    private let enginePath: String
+    /// Path to the PyInstaller-bundled engine binary (preferred for distribution).
+    private let bundledEnginePath: String?
+    /// Path to the Python script (fallback for development).
+    private let pythonScriptPath: String?
     
     private init() {
-        let bundle = Bundle.main
-        if let resourcePath = bundle.resourcePath {
-            enginePath = resourcePath + "/engine/main.py"
+        if let resourcePath = Bundle.main.resourcePath {
+            // 1. Look for bundled binary first (PyInstaller --onedir output)
+            let binaryPath = (resourcePath as NSString)
+                .appendingPathComponent("engine/bin/offveil-engine/offveil-engine")
+            if FileManager.default.isExecutableFile(atPath: binaryPath) {
+                bundledEnginePath = binaryPath
+            } else {
+                bundledEnginePath = nil
+            }
+            
+            // 2. Python script fallback (development mode)
+            let scriptPath = (resourcePath as NSString)
+                .appendingPathComponent("engine/main.py")
+            if FileManager.default.fileExists(atPath: scriptPath) {
+                pythonScriptPath = scriptPath
+            } else {
+                pythonScriptPath = nil
+            }
         } else {
-            enginePath = ""
+            bundledEnginePath = nil
+            pythonScriptPath = nil
         }
     }
     
     func executeCommandSync(_ command: String) -> Result<[String: Any], Error> {
-        guard !enginePath.isEmpty, FileManager.default.fileExists(atPath: enginePath) else {
+        // Determine which executable to use
+        let executableURL: URL
+        let arguments: [String]
+        
+        if let binaryPath = bundledEnginePath {
+            // Use bundled standalone binary (no Python required)
+            executableURL = URL(fileURLWithPath: binaryPath)
+            arguments = [command]
+        } else if let scriptPath = pythonScriptPath {
+            // Fallback: use system Python (development mode)
+            executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+            arguments = [scriptPath, command]
+        } else {
             return .failure(
                 NSError(
                     domain: "EngineService",
                     code: -2,
-                    userInfo: [NSLocalizedDescriptionKey: "Engine script not found at \(enginePath)"]
+                    userInfo: [NSLocalizedDescriptionKey: "Engine not found. Neither bundled binary nor Python script available."]
                 )
             )
         }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = [enginePath, command]
+        process.executableURL = executableURL
+        process.arguments = arguments
         var env = ProcessInfo.processInfo.environment
         env["OFFVEIL_OWNER_PID"] = String(ProcessInfo.processInfo.processIdentifier)
         process.environment = env

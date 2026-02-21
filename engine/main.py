@@ -51,12 +51,18 @@ def _start_exit_watchdog(owner_pid, watchdog_token):
         return None
 
     try:
-        watchdog_script = Path(__file__).resolve().parent / "app_watchdog.py"
-        if not watchdog_script.exists():
-            return None
+        if getattr(sys, 'frozen', False):
+            # PyInstaller bundle: run ourselves with 'watchdog' command
+            cmd = [sys.executable, "watchdog", str(owner_pid), watchdog_token]
+        else:
+            # Development: run the watchdog Python script directly
+            watchdog_script = Path(__file__).resolve().parent / "app_watchdog.py"
+            if not watchdog_script.exists():
+                return None
+            cmd = ["/usr/bin/python3", str(watchdog_script), str(owner_pid), watchdog_token]
 
         process = subprocess.Popen(
-            ["/usr/bin/python3", str(watchdog_script), str(owner_pid), watchdog_token],
+            cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
@@ -87,6 +93,8 @@ def main():
         handle_rebind_proxy()
     elif command == "detect_isp":
         handle_detect_isp()
+    elif command == "watchdog":
+        handle_watchdog()
     else:
         error_response(f"Unknown command: {command}")
 
@@ -609,6 +617,73 @@ def handle_rebind_proxy():
 
     except Exception as e:
         error_response(f"Rebind proxy failed: {str(e)}")
+
+
+def handle_watchdog():
+    """
+    Run the crash watchdog loop directly (used when invoked from PyInstaller bundle).
+    Usage: offveil-engine watchdog <owner_pid> <watchdog_token>
+    """
+    import app_watchdog
+
+    if len(sys.argv) < 4:
+        return
+
+    try:
+        owner_pid = int(sys.argv[2])
+    except ValueError:
+        return
+
+    watchdog_token = sys.argv[3].strip()
+    if owner_pid <= 1 or not watchdog_token:
+        return
+
+    # Override _run_restore to use the bundled binary instead of python3 + script
+    if getattr(sys, 'frozen', False):
+        original_run_restore = app_watchdog._run_restore
+
+        def _bundled_run_restore(_engine_main_unused):
+            try:
+                result = subprocess.run(
+                    [sys.executable, "check_and_restore"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    timeout=30,
+                )
+                if result.returncode == 0 and result.stdout:
+                    data = json.loads(result.stdout.decode())
+                    return data.get("success", False)
+            except Exception:
+                pass
+            return False
+
+        app_watchdog._run_restore = _bundled_run_restore
+
+    # Reuse app_watchdog's main loop logic
+    import time
+
+    engine_main = Path(sys.executable) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent / "main.py"
+
+    while True:
+        state = state_manager.load_state()
+        if not state or not state.get("active"):
+            return
+
+        if state.get("watchdog_token") != watchdog_token:
+            return
+
+        if app_watchdog._is_pid_alive(owner_pid):
+            time.sleep(app_watchdog.POLL_INTERVAL_SECONDS)
+            continue
+
+        # Owner process died — attempt restore with retries.
+        for attempt in range(1, app_watchdog.MAX_RESTORE_ATTEMPTS + 1):
+            if app_watchdog._run_restore(engine_main):
+                return
+            if attempt < app_watchdog.MAX_RESTORE_ATTEMPTS:
+                time.sleep(app_watchdog.RETRY_DELAY_SECONDS)
+
+        return
 
 
 def error_response(message):

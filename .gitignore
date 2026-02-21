@@ -12,6 +12,7 @@ engine/__pycache__/
 engine/*.pyc
 
 # Local access binary / installer artifacts
+engine/bin/offveil-engine/
 engine/bin/spoofdpi-*
 engine/bin/*.tar
 engine/bin/*.tar.gz

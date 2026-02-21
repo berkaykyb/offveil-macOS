@@ -17,6 +17,7 @@ import os
 import signal
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -50,11 +51,18 @@ UNIVERSAL_CONFIG = {
 
 
 def _binary_candidates():
-    engine_dir = Path(__file__).resolve().parent
+    if getattr(sys, 'frozen', False):
+        # PyInstaller bundle: sys.executable = engine/bin/offveil-engine/offveil-engine
+        # spoofdpi lives at engine/bin/spoofdpi (sibling of offveil-engine dir)
+        bin_dir = Path(sys.executable).resolve().parent.parent
+    else:
+        # Normal Python: access_manager.py is in engine/
+        bin_dir = Path(__file__).resolve().parent / "bin"
+
     return [
-        str(engine_dir / "bin" / "spoofdpi"),
-        str(engine_dir / "bin" / "spoofdpi-arm64"),
-        str(engine_dir / "bin" / "spoofdpi-x86_64"),
+        str(bin_dir / "spoofdpi"),
+        str(bin_dir / "spoofdpi-arm64"),
+        str(bin_dir / "spoofdpi-x86_64"),
     ]
 
 
