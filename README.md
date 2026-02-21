@@ -63,7 +63,7 @@ Everything happens on-device, ensuring maximum privacy and zero latency overhead
 
 ## Technical Architecture & The Road to v2.0
 
-Currently (v1.x), OffVeil for macOS utilizes [SpoofDPI](https://github.com/xvzc/SpoofDPI) as its core packet-processing engine. The application establishes a local proxy (`127.0.0.1:18080`) and automatically routes all system HTTP/HTTPS traffic through it to perform TLS ClientHello fragmentation.
+Currently (Beta), OffVeil for macOS utilizes [SpoofDPI](https://github.com/xvzc/SpoofDPI) as its core packet-processing engine. The application establishes a local proxy (`127.0.0.1:18080`) and automatically routes all system HTTP/HTTPS traffic through it to perform TLS ClientHello fragmentation.
 
 ### Why not kernel-level interception yet?
 
