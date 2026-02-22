@@ -84,8 +84,8 @@ def main():
         handle_activate()
     elif command == "deactivate":
         handle_deactivate()
-    elif command == "cleanup":
-        handle_cleanup()
+    elif command == "reset":
+        handle_reset()
     elif command == "check_and_restore":
         handle_check_and_restore()
     elif command == "rebind_proxy":
@@ -266,7 +266,7 @@ def handle_deactivate():
         error_response(f"Deactivation failed: {str(e)}")
 
 
-def handle_cleanup():
+def handle_reset():
     """
     Full system cleanup:
       1. Stop any running SpoofDPI / DPI bypass processes

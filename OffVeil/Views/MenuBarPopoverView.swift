@@ -13,7 +13,7 @@ struct MenuBarPopoverView: View {
     @State private var isProcessing = false
     @State private var errorMessage: String?
     @State private var showSettings = false
-    @State private var cleanupConfirmPending = false
+    @State private var resetConfirmPending = false
     @State private var quitConfirmPending = false
     @StateObject private var updateManager = UpdateManager.shared
     @ObservedObject private var settings = SettingsManager.shared
@@ -148,24 +148,23 @@ struct MenuBarPopoverView: View {
     private var footer: some View {
         HStack(spacing: 0) {
             Button(action: {
-                if cleanupConfirmPending {
-                    cleanupConfirmPending = false
-                    Task { await cleanup() }
+                if resetConfirmPending {
+                    resetConfirmPending = false
+                    Task { await reset() }
                 } else {
-                    cleanupConfirmPending = true
-                    // Auto-reset after 3 seconds
+                    resetConfirmPending = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        cleanupConfirmPending = false
+                        resetConfirmPending = false
                     }
                 }
             }) {
                 HStack(spacing: 5) {
-                    Image(systemName: cleanupConfirmPending ? "exclamationmark.triangle" : "arrow.counterclockwise")
-                    Text(cleanupConfirmPending ? localized(.cleanupConfirm) : localized(.cleanup))
+                    Image(systemName: resetConfirmPending ? "exclamationmark.triangle" : "arrow.counterclockwise")
+                    Text(resetConfirmPending ? localized(.resetConfirm) : localized(.reset))
                 }
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(cleanupConfirmPending ? .ovErrorText : secondaryTextColor)
-                .animation(.easeInOut(duration: 0.2), value: cleanupConfirmPending)
+                .foregroundColor(resetConfirmPending ? .ovErrorText : secondaryTextColor)
+                .animation(.easeInOut(duration: 0.2), value: resetConfirmPending)
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(isProcessing)
@@ -276,7 +275,7 @@ struct MenuBarPopoverView: View {
     }
 
     @MainActor
-    private func cleanup() async {
+    private func reset() async {
         if isProcessing {
             return
         }
@@ -289,9 +288,9 @@ struct MenuBarPopoverView: View {
         // 1. Deactivate if currently active
         _ = await EngineService.shared.executeCommand("deactivate")
 
-        // 2. Full system cleanup (DNS, proxy, orphan processes)
-        let cleanupResult = await EngineService.shared.executeCommand("cleanup")
-        switch cleanupResult {
+        // 2. Full system reset (DNS, proxy, orphan processes)
+        let resetResult = await EngineService.shared.executeCommand("reset")
+        switch resetResult {
         case .success(let data):
             let success = data["success"] as? Bool ?? false
             if !success {
