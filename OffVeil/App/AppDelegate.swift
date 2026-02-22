@@ -38,7 +38,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         NetworkMonitor.shared.startMonitoring()
         UpdateManager.shared.startPeriodicChecks()
         NotificationService.shared.requestAuthorization()
-        NotificationService.shared.requestAuthorization()
 
         // If we relaunched after an update, re-activate protection automatically.
         if UserDefaults.standard.bool(forKey: "pendingRelaunchActivation") {
@@ -269,9 +268,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     deinit {
-        if let observer = statusChangeObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
         if let observer = statusChangeObserver {
             NotificationCenter.default.removeObserver(observer)
         }
