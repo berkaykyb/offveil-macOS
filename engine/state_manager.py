@@ -59,9 +59,6 @@ def clear_state() -> None:
     if not os.path.exists(STATE_FILE):
         return
     try:
-        with open(STATE_FILE, "r+", encoding="utf-8") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            fcntl.flock(f, fcntl.LOCK_UN)
         os.remove(STATE_FILE)
     except OSError:
         pass

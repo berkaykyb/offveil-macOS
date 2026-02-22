@@ -354,10 +354,13 @@ def handle_cleanup():
 
 
 def _kill_all_dpi_processes():
-    """Kill any running spoofdpi or similar DPI bypass processes."""
+    """Kill any running spoofdpi or similar DPI bypass processes.
+
+    Sends SIGTERM first and waits up to 2 seconds for graceful exit.
+    Falls back to SIGKILL only if the process is still alive.
+    """
+    import signal as _signal
     killed_count = 0
-    # Exact binary names to match — ps comm gives only the executable name,
-    # not the full command line, so unrelated processes can't be accidentally matched.
     target_names = {"spoofdpi", "spoofDPI", "SpoofDPI", "goodbyedpi", "GoodbyeDPI"}
     own_pid = os.getpid()
 
@@ -369,22 +372,44 @@ def _kill_all_dpi_processes():
         if result.returncode != 0:
             return 0
 
+        pids_to_kill = []
         for line in result.stdout.splitlines():
             parts = line.strip().split(None, 1)
             if len(parts) != 2:
                 continue
             pid_str, comm = parts
-            # comm may include a path — check just the basename
             if os.path.basename(comm) not in target_names:
                 continue
             try:
                 pid = int(pid_str)
                 if pid == own_pid:
                     continue
-                os.kill(pid, 9)
-                killed_count += 1
-            except (ValueError, ProcessLookupError, PermissionError):
+                pids_to_kill.append(pid)
+            except ValueError:
                 pass
+
+        # Phase 1: SIGTERM — ask each process to exit gracefully
+        for pid in pids_to_kill:
+            try:
+                os.kill(pid, _signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+        # Phase 2: Wait up to 2 seconds for them to exit
+        if pids_to_kill:
+            import time as _time
+            _time.sleep(2.0)
+
+        # Phase 3: SIGKILL any that are still alive
+        for pid in pids_to_kill:
+            try:
+                os.kill(pid, 0)  # check if still alive
+                os.kill(pid, _signal.SIGKILL)
+                killed_count += 1
+            except (ProcessLookupError, PermissionError):
+                # Already gone — SIGTERM worked
+                killed_count += 1
+
     except Exception:
         pass
 
