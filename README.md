@@ -1,3 +1,4 @@
+<p align="center">
   <img src="assets/offveil-logo.svg" alt="OffVeil" width="400" />
 </p>
 
