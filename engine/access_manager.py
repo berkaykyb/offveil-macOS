@@ -111,6 +111,19 @@ def _tail_text(path, max_chars=800):
         return ""
 
 
+def _rotate_logs(keep=5):
+    """Delete oldest log files, keeping only the most recent `keep` files."""
+    try:
+        logs = sorted(_LOG_DIR.glob("access-*.log"), key=lambda p: p.stat().st_mtime)
+        for old_log in logs[:-keep]:
+            try:
+                old_log.unlink()
+            except OSError:
+                pass
+    except Exception:
+        pass
+
+
 def _is_port_in_use(host, port):
     try:
         with socket.create_connection((host, int(port)), timeout=0.3):
@@ -158,6 +171,7 @@ def start_access_process(host=None, port=None):
 
     try:
         _ensure_log_dir()
+        _rotate_logs()
         log_path = str(_LOG_DIR / f"access-{int(time.time() * 1000)}.log")
 
         with open(log_path, "ab") as log_file:

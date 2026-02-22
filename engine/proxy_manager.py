@@ -7,7 +7,8 @@ def _run_networksetup(args):
         ["networksetup"] + args,
         check=True,
         capture_output=True,
-        text=True
+        text=True,
+        timeout=10,
     )
 
 

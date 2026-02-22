@@ -9,7 +9,8 @@ def get_primary_service():
             ["networksetup", "-listallhardwareports"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=10,
         )
     except subprocess.CalledProcessError:
         service_result = None
@@ -19,7 +20,8 @@ def get_primary_service():
             ["route", "-n", "get", "default"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=10,
         )
 
         interface_id = None
@@ -54,7 +56,8 @@ def get_active_interfaces():
             ["networksetup", "-listallnetworkservices"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=10,
         )
         
         # İlk satır "An asterisk (*) denotes..." şeklinde açıklama, onu atla
