@@ -14,7 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var popover: NSPopover?
     private var globalEventMonitor: Any?
     private var localEventMonitor: Any?
-    private var localEventMonitor: Any?
+
     private var statusChangeObserver: NSObjectProtocol?
     private let settings = SettingsManager.shared
     
