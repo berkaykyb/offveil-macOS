@@ -4,14 +4,5 @@
 <dict>
 	<key>LSUIElement</key>
 	<true/>
-	<key>SMAuthorizedClients</key>
-	<array>
-		<string>identifier "com.berkay.OffVeil" and anchor apple generic</string>
-	</array>
-	<key>SMPrivilegedExecutables</key>
-	<dict>
-		<key>com.offveil.OffVeilHelper</key>
-		<string>identifier "com.offveil.OffVeilHelper" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
-	</dict>
 </dict>
 </plist>
