@@ -15,7 +15,6 @@ struct MenuBarPopoverView: View {
     @State private var showSettings = false
     @State private var cleanupConfirmPending = false
     @State private var quitConfirmPending = false
-    @StateObject private var ispManager = ISPManager.shared
     @StateObject private var updateManager = UpdateManager.shared
     @ObservedObject private var settings = SettingsManager.shared
     
@@ -34,7 +33,6 @@ struct MenuBarPopoverView: View {
         .animation(.easeInOut(duration: 0.3), value: showSettings)
         .onAppear {
             showSettings = false
-            ispManager.detectISP()
             Task {
                 await refreshStatus()
             }
@@ -86,26 +84,7 @@ struct MenuBarPopoverView: View {
 
             Spacer(minLength: 24)
 
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(statusAccent.opacity(0.42))
-                        .frame(width: 16, height: 16)
-                        .blur(radius: 4)
-                    Circle()
-                        .fill(statusAccent)
-                        .frame(width: 7, height: 7)
-                }
-                .animation(.easeInOut(duration: 0.25), value: hasStatusError)
-                Text(localizedISPName)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(primaryTextColor)
-                    .opacity(ispManager.ispStatus.isDetecting ? 0.55 : 1.0)
-                    .lineLimit(1)
-                Spacer()
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 10)
+
 
             Divider()
                 .overlay(Color.white.opacity(0.08))
@@ -254,29 +233,7 @@ struct MenuBarPopoverView: View {
 
     private var secondaryTextColor: Color { .ovTextSecondary }
 
-    private var hasStatusError: Bool {
-        if errorMessage != nil {
-            return true
-        }
-        return ispManager.ispStatus.isError
-    }
 
-    private var statusAccent: Color {
-        hasStatusError ? .ovErrorAccent : .ovStatusGreen
-    }
-
-    private var localizedISPName: String {
-        switch ispManager.ispStatus {
-        case .detecting:
-            return localized(.ispDetecting)
-        case .unknown:
-            return localized(.ispUnknown)
-        case .failed:
-            return localized(.ispDetectionFailed)
-        case .detected(let name):
-            return name
-        }
-    }
 
     private func localized(_ key: L10nKey) -> String {
         AppLocalizer.text(key, language: settings.appLanguage)
@@ -308,12 +265,6 @@ struct MenuBarPopoverView: View {
             if data["success"] as? Bool == true {
                 isActive = !isActive
                 NotificationService.shared.sendProtectionNotification(isActive: isActive)
-                if isActive {
-                    if let normalizedISP = data["isp_normalized"] as? String,
-                       !normalizedISP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        ispManager.ispStatus = .detected(normalizedISP)
-                    }
-                }
             } else {
                 errorMessage = (data["error"] as? String) ?? localized(.operationFailed)
             }
@@ -353,8 +304,6 @@ struct MenuBarPopoverView: View {
         // 3. Fallback: also run check_and_restore
         _ = await EngineService.shared.executeCommand("check_and_restore")
 
-        ispManager.invalidateCache()
-        ispManager.detectISP()
         isActive = false
         publishProtectionState()
         await refreshStatus()

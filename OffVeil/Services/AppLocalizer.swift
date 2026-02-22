@@ -43,10 +43,6 @@ enum L10nKey: String {
     case operationFailed
     case resetFailed
 
-    case ispDetecting
-    case ispUnknown
-    case ispDetectionFailed
-
     case themeSection
     case themeEnergy
     case themeClassic
@@ -113,10 +109,6 @@ struct AppLocalizer {
             .operationFailed: "Operation failed",
             .resetFailed: "Reset failed",
 
-            .ispDetecting: "Detecting...",
-            .ispUnknown: "Unknown",
-            .ispDetectionFailed: "Detection failed",
-
             .themeSection: "Theme",
             .themeEnergy: "Energy",
             .themeClassic: "Classic",
@@ -173,10 +165,6 @@ struct AppLocalizer {
             .checkUpdates: "Güncellemeleri kontrol et",
             .operationFailed: "İşlem başarısız",
             .resetFailed: "Sıfırlama başarısız",
-
-            .ispDetecting: "Algılanıyor...",
-            .ispUnknown: "Bilinmiyor",
-            .ispDetectionFailed: "Algılama başarısız",
 
             .themeSection: "Tema",
             .themeEnergy: "Enerji",

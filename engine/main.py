@@ -27,7 +27,6 @@ from pathlib import Path
 
 import dns_manager
 import state_manager
-import isp_detector
 import proxy_manager
 import access_manager
 
@@ -91,8 +90,7 @@ def main():
         handle_check_and_restore()
     elif command == "rebind_proxy":
         handle_rebind_proxy()
-    elif command == "detect_isp":
-        handle_detect_isp()
+
     elif command == "watchdog":
         handle_watchdog()
     else:
@@ -185,15 +183,6 @@ def handle_activate():
             state_data["watchdog_pid"] = watchdog_pid
             state_manager.save_state(state_data)
 
-        # 6. Best-effort ISP detection (for display only, does not affect bypass)
-        isp_name = None
-        try:
-            isp_result = isp_detector.detect_isp()
-            if isp_result.get("success"):
-                isp_name = isp_result.get("normalized_isp")
-        except Exception:
-            pass
-
         response = {
             "success": True,
             "message": "Activated successfully",
@@ -204,7 +193,6 @@ def handle_activate():
             "access_pid": proxy_pid,
             "owner_pid": owner_pid,
             "watchdog_pid": watchdog_pid,
-            "isp_normalized": isp_name,
             "timestamp": datetime.now().isoformat(),
         }
         print(json.dumps(response))
@@ -421,29 +409,7 @@ def _flush_dns_cache():
         pass
 
 
-def handle_detect_isp():
-    """ISP detection - for display only, does not affect bypass config."""
-    try:
-        result = isp_detector.detect_isp(force_refresh=True)
 
-        if result["success"]:
-            response = {
-                "success": True,
-                "isp": result["isp"],
-                "normalized_isp": result["normalized_isp"],
-                "country": result.get("country"),
-                "timestamp": datetime.now().isoformat(),
-            }
-        else:
-            response = {
-                "success": False,
-                "error": result.get("error", "Unknown error"),
-            }
-
-        print(json.dumps(response))
-
-    except Exception as e:
-        error_response(f"ISP detection failed: {str(e)}")
 
 
 def handle_check_and_restore():
