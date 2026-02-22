@@ -31,7 +31,6 @@ enum L10nKey: String {
     case openSourceRowSubtitle
 
     case openSourceSection
-    case spoofDpiBody
 
     case protectionActive
     case protectionInactive
@@ -97,7 +96,7 @@ struct AppLocalizer {
             .openSourceRowSubtitle: "Third-party components and licenses",
 
             .openSourceSection: "Open Source",
-            .spoofDpiBody: "SpoofDPI — Copyright (c) 2022 xvzc\n\nLicensed under the Apache License, Version 2.0. You may obtain a copy of the License at:\nhttps://www.apache.org/licenses/LICENSE-2.0\n\nSpoofDPI is used as the core packet-fragmentation engine in OffVeil v1.x. Source code available at:\nhttps://github.com/xvzc/SpoofDPI",
+
 
             .protectionActive: "Protection Active",
             .protectionInactive: "Protection Inactive",
@@ -154,7 +153,7 @@ struct AppLocalizer {
             .openSourceRowSubtitle: "Üçüncü taraf bileşenler ve lisanslar",
 
             .openSourceSection: "Açık Kaynak",
-            .spoofDpiBody: "SpoofDPI — Telif Hakkı (c) 2022 xvzc\n\nApache Lisansı, Sürüm 2.0 kapsamında lisanslanmıştır. Lisansın bir kopyasına aşağıdaki adresten ulaşabilirsiniz:\nhttps://www.apache.org/licenses/LICENSE-2.0\n\nSpoofDPI, OffVeil v1.x'te temel paket parçalama motoru olarak kullanılmaktadır. Kaynak kod:\nhttps://github.com/xvzc/SpoofDPI",
+
 
             .protectionActive: "Koruma Aktif",
             .protectionInactive: "Koruma Pasif",

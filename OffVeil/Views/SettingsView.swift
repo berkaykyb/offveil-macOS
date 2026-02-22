@@ -185,14 +185,34 @@ struct SettingsView: View {
         VStack(spacing: 10) {
             SettingsSectionCard(title: localized(.openSourceSection)) {
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("SpoofDPI")
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundColor(.white.opacity(0.95))
-                        Text(localized(.spoofDpiBody))
+
+                        Text("Copyright (c) 2022 xvzc")
                             .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(.white.opacity(0.70))
-                            .fixedSize(horizontal: false, vertical: true)
+                            .foregroundColor(.white.opacity(0.60))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(settings.appLanguage == .tr
+                                 ? "Apache Lisans\u{0131}, S\u{00FC}r\u{00FC}m 2.0 kapsam\u{0131}nda lisanslanm\u{0131}\u{015F}t\u{0131}r:"
+                                 : "Licensed under the Apache License, Version 2.0:")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.white.opacity(0.60))
+                            HoverLink("apache.org/licenses/LICENSE-2.0",
+                                      url: "https://www.apache.org/licenses/LICENSE-2.0")
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(settings.appLanguage == .tr
+                                 ? "Kaynak kod:"
+                                 : "Source code:")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.white.opacity(0.60))
+                            HoverLink("github.com/xvzc/SpoofDPI",
+                                      url: "https://github.com/xvzc/SpoofDPI")
+                        }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 12)
@@ -534,6 +554,40 @@ private struct AppMark: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 20, height: 20)
+        }
+    }
+}
+
+// MARK: - HoverLink
+
+private struct HoverLink: View {
+    let label: String
+    let url: String
+    @State private var isHovering = false
+
+    init(_ label: String, url: String) {
+        self.label = label
+        self.url = url
+    }
+
+    var body: some View {
+        if let destination = URL(string: url) {
+            Link(destination: destination) {
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.ovBrandGreen)
+                    .opacity(isHovering ? 0.75 : 1.0)
+                    .underline(isHovering)
+                    .animation(.easeInOut(duration: 0.15), value: isHovering)
+            }
+            .onHover { hovering in
+                isHovering = hovering
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
         }
     }
 }
