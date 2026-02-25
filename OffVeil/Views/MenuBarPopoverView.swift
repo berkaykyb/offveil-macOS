@@ -33,6 +33,8 @@ struct MenuBarPopoverView: View {
         .animation(.easeInOut(duration: 0.3), value: showSettings)
         .onAppear {
             showSettings = false
+            resetConfirmPending = false
+            quitConfirmPending = false
             Task {
                 await refreshStatus()
             }
