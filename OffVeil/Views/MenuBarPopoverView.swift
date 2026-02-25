@@ -289,8 +289,7 @@ struct MenuBarPopoverView: View {
         _ = await EngineService.shared.executeCommand("deactivate")
 
         // 2. Full system reset (DNS, proxy, orphan processes)
-        // Note: engine binary command name is "cleanup" until binary is rebuilt
-        let resetResult = await EngineService.shared.executeCommand("cleanup")
+        let resetResult = await EngineService.shared.executeCommand("reset")
         switch resetResult {
         case .success(let data):
             let success = data["success"] as? Bool ?? false
