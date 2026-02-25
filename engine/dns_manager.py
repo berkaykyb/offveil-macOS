@@ -79,7 +79,8 @@ def reset_dns_to_default(interface):
             ["networksetup", "-setdnsservers", interface, "Empty"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=10,
         )
         return True
     except subprocess.CalledProcessError:
