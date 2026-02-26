@@ -42,6 +42,14 @@ enum L10nKey: String {
     case operationFailed
     case resetFailed
 
+    case errorNoNetwork
+    case errorPortInUse
+    case errorEngineStart
+    case errorProxyFailed
+    case errorTimeout
+    case errorDeactivateRetry
+    case errorGeneric
+
     case themeSection
     case themeEnergy
     case themeClassic
@@ -108,6 +116,14 @@ struct AppLocalizer {
             .operationFailed: "Operation failed",
             .resetFailed: "Reset failed",
 
+            .errorNoNetwork: "No internet connection found. Check your network.",
+            .errorPortInUse: "Another app is using the required port. Close it and try again.",
+            .errorEngineStart: "Could not start the protection engine. Try Reset.",
+            .errorProxyFailed: "Could not configure system proxy. Try Reset.",
+            .errorTimeout: "The operation timed out. Try again.",
+            .errorDeactivateRetry: "Could not fully deactivate. Try again or use Reset.",
+            .errorGeneric: "Something went wrong. Try again or use Reset.",
+
             .themeSection: "Theme",
             .themeEnergy: "Energy",
             .themeClassic: "Classic",
@@ -164,6 +180,14 @@ struct AppLocalizer {
             .checkUpdates: "Güncellemeleri kontrol et",
             .operationFailed: "İşlem başarısız",
             .resetFailed: "Sıfırlama başarısız",
+
+            .errorNoNetwork: "İnternet bağlantısı bulunamadı. Ağınızı kontrol edin.",
+            .errorPortInUse: "Başka bir uygulama gerekli portu kullanıyor. Kapatıp tekrar deneyin.",
+            .errorEngineStart: "Koruma motoru başlatılamadı. Sıfırla'yı deneyin.",
+            .errorProxyFailed: "Sistem proxy ayarları yapılamadı. Sıfırla'yı deneyin.",
+            .errorTimeout: "İşlem zaman aşımına uğradı. Tekrar deneyin.",
+            .errorDeactivateRetry: "Tam olarak kapatılamadı. Tekrar deneyin veya Sıfırla'yı kullanın.",
+            .errorGeneric: "Bir sorun oluştu. Tekrar deneyin veya Sıfırla'yı kullanın.",
 
             .themeSection: "Tema",
             .themeEnergy: "Enerji",

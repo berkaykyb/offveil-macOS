@@ -240,6 +240,30 @@ struct MenuBarPopoverView: View {
         AppLocalizer.text(key, language: settings.appLanguage)
     }
 
+    /// Map raw engine error strings to user-friendly localized messages.
+    private func friendlyError(_ raw: String) -> String {
+        let lowered = raw.lowercased()
+        if lowered.contains("no active network service") {
+            return localized(.errorNoNetwork)
+        }
+        if lowered.contains("port") && lowered.contains("already in use") {
+            return localized(.errorPortInUse)
+        }
+        if lowered.contains("failed to start access") || lowered.contains("no access binary") {
+            return localized(.errorEngineStart)
+        }
+        if lowered.contains("failed to set system proxy") || lowered.contains("failed to apply proxy") {
+            return localized(.errorProxyFailed)
+        }
+        if lowered.contains("timed out") {
+            return localized(.errorTimeout)
+        }
+        if lowered.contains("deactivation incomplete") {
+            return localized(.errorDeactivateRetry)
+        }
+        return localized(.errorGeneric)
+    }
+
     private func publishProtectionState() {
         NotificationCenter.default.post(
             name: .offveilProtectionStatusChanged,
@@ -267,10 +291,11 @@ struct MenuBarPopoverView: View {
                 isActive = !isActive
                 NotificationService.shared.sendProtectionNotification(isActive: isActive)
             } else {
-                errorMessage = (data["error"] as? String) ?? localized(.operationFailed)
+                let raw = (data["error"] as? String) ?? ""
+                errorMessage = friendlyError(raw)
             }
         case .failure(let error):
-            errorMessage = error.localizedDescription
+            errorMessage = friendlyError(error.localizedDescription)
         }
 
         await refreshStatus()
@@ -296,10 +321,10 @@ struct MenuBarPopoverView: View {
         case .success(let data):
             let success = data["success"] as? Bool ?? false
             if !success {
-                errorMessage = (data["message"] as? String) ?? localized(.resetFailed)
+                errorMessage = localized(.resetFailed)
             }
         case .failure(let error):
-            errorMessage = error.localizedDescription
+            errorMessage = friendlyError(error.localizedDescription)
         }
 
         // 3. Fallback: also run check_and_restore
