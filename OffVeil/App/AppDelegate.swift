@@ -184,7 +184,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
 
         // Asset catalog fallback
-        let catalogName = isActive ? "OffVeilLogoActive" : "OffVeilLogoInactive"
+        let catalogName = isActive ? "OffVeilMenuActive" : "OffVeilMenuInactive"
         if let image = NSImage(named: NSImage.Name(catalogName)) {
             return image
         }

@@ -195,9 +195,7 @@ struct SettingsView: View {
                             .foregroundColor(.white.opacity(0.60))
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(settings.appLanguage == .tr
-                                 ? "Apache Lisans\u{0131}, S\u{00FC}r\u{00FC}m 2.0 kapsam\u{0131}nda lisanslanm\u{0131}\u{015F}t\u{0131}r:"
-                                 : "Licensed under the Apache License, Version 2.0:")
+                            Text(localized(.licensedUnderApache))
                                 .font(.system(size: 12, weight: .regular))
                                 .foregroundColor(.white.opacity(0.60))
                             HoverLink("apache.org/licenses/LICENSE-2.0",
@@ -205,9 +203,7 @@ struct SettingsView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(settings.appLanguage == .tr
-                                 ? "Kaynak kod:"
-                                 : "Source code:")
+                            Text(localized(.sourceCode))
                                 .font(.system(size: 12, weight: .regular))
                                 .foregroundColor(.white.opacity(0.60))
                             HoverLink("github.com/xvzc/SpoofDPI",

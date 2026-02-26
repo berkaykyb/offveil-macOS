@@ -31,6 +31,8 @@ enum L10nKey: String {
     case openSourceRowSubtitle
 
     case openSourceSection
+    case licensedUnderApache
+    case sourceCode
 
     case protectionActive
     case protectionInactive
@@ -104,6 +106,8 @@ struct AppLocalizer {
             .openSourceRowSubtitle: "Third-party components and licenses",
 
             .openSourceSection: "Open Source",
+            .licensedUnderApache: "Licensed under the Apache License, Version 2.0:",
+            .sourceCode: "Source code:",
 
 
             .protectionActive: "Protection Active",
@@ -169,6 +173,8 @@ struct AppLocalizer {
             .openSourceRowSubtitle: "Üçüncü taraf bileşenler ve lisanslar",
 
             .openSourceSection: "Açık Kaynak",
+            .licensedUnderApache: "Apache Lisansı, Sürüm 2.0 kapsamında lisanslanmıştır:",
+            .sourceCode: "Kaynak kod:",
 
 
             .protectionActive: "Koruma Aktif",

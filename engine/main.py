@@ -652,31 +652,11 @@ def handle_watchdog():
 
         app_watchdog._run_restore = _bundled_run_restore
 
-    # Reuse app_watchdog's main loop logic
-    import time
-
-    engine_main = Path(sys.executable) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent / "main.py"
-
-    while True:
-        state = state_manager.load_state()
-        if not state or not state.get("active"):
-            return
-
-        if state.get("watchdog_token") != watchdog_token:
-            return
-
-        if app_watchdog._is_pid_alive(owner_pid):
-            time.sleep(app_watchdog.POLL_INTERVAL_SECONDS)
-            continue
-
-        # Owner process died — attempt restore with retries.
-        for attempt in range(1, app_watchdog.MAX_RESTORE_ATTEMPTS + 1):
-            if app_watchdog._run_restore(engine_main):
-                return
-            if attempt < app_watchdog.MAX_RESTORE_ATTEMPTS:
-                time.sleep(app_watchdog.RETRY_DELAY_SECONDS)
-
-        return
+    # Delegate to app_watchdog's main loop — no need to duplicate it here.
+    # sys.argv already contains [executable, "watchdog", owner_pid, token]
+    # which app_watchdog.main() parses from sys.argv[1:].
+    sys.argv = sys.argv[1:]  # shift so app_watchdog sees [owner_pid, token]
+    raise SystemExit(app_watchdog.main())
 
 
 def error_response(message):
