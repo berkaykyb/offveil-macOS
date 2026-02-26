@@ -237,8 +237,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
 
     private func applyStartupPreferences() {
-        guard settings.launchAtLogin else {
-            return
+        let isFirstLaunch = !UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
+        if isFirstLaunch {
+            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
         }
 
         Task.detached { [weak self] in
@@ -249,7 +250,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 await self.refreshStatusItemIcon()
             }
 
-            guard !self.settings.startHiddenOnLaunch else {
+            // First install → always show popover so user discovers the app.
+            // Later launches → respect the "Start Hidden" preference.
+            if !isFirstLaunch && self.settings.startHiddenOnLaunch {
                 return
             }
 
