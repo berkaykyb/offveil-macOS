@@ -38,6 +38,7 @@ class UpdateManager: ObservableObject {
     }
 
     private var periodicTask: Task<Void, Never>?
+    private var lastCheckDate: Date?
 
     private init() {}
 
@@ -64,13 +65,26 @@ class UpdateManager: ObservableObject {
 
     // MARK: - Public API
 
+    /// Check for updates only if the last check was more than 30 minutes ago.
+    /// Called when the popover opens to keep the UI fresh without spamming the API.
+    @MainActor
+    func checkIfStale() async {
+        if let last = lastCheckDate, Date().timeIntervalSince(last) < 30 * 60 {
+            return  // checked recently, skip
+        }
+        await checkForUpdate()
+    }
+
     /// Check GitHub for a newer release.
     @MainActor
     func checkForUpdate() async {
         guard !isChecking else { return }
         isChecking = true
         errorMessage = nil
-        defer { isChecking = false }
+        defer {
+            isChecking = false
+            lastCheckDate = Date()
+        }
 
         do {
             var request = URLRequest(url: apiURL)

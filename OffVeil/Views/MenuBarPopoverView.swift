@@ -37,6 +37,7 @@ struct MenuBarPopoverView: View {
             quitConfirmPending = false
             Task {
                 await refreshStatus()
+                await updateManager.checkIfStale()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .offveilPopoverDidOpen)) { _ in
