@@ -209,6 +209,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
     
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // During update relaunch, skip deactivation — the new version will
+        // inherit the active protection state via pendingRelaunchActivation.
+        if UserDefaults.standard.bool(forKey: "skipCleanupOnTerminate") {
+            UserDefaults.standard.removeObject(forKey: "skipCleanupOnTerminate")
+            return .terminateNow
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             self.restoreSystemOnExit()
             DispatchQueue.main.async {

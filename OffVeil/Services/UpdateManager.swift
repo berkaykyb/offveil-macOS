@@ -327,6 +327,9 @@ class UpdateManager: ObservableObject {
         // Mark that we're relaunching after an update so the new version can
         // auto-activate protection on launch.
         UserDefaults.standard.set(true, forKey: "pendingRelaunchActivation")
+        // Tell AppDelegate to skip deactivation during this terminate —
+        // the new version will inherit the active protection state.
+        UserDefaults.standard.set(true, forKey: "skipCleanupOnTerminate")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")

@@ -91,7 +91,28 @@ class EngineService {
                 group.leave()
             }
 
-            process.waitUntilExit()
+            // Wait for the process to exit with a 30-second timeout.
+            // If the engine hangs (e.g. deadlock, infinite loop), we terminate
+            // it instead of blocking the caller forever.
+            let timeoutSeconds = 30.0
+            let semaphore = DispatchSemaphore(value: 0)
+
+            process.terminationHandler = { _ in
+                semaphore.signal()
+            }
+
+            let waitResult = semaphore.wait(timeout: .now() + timeoutSeconds)
+            if waitResult == .timedOut {
+                process.terminate()
+                return .failure(
+                    NSError(
+                        domain: "EngineService",
+                        code: -3,
+                        userInfo: [NSLocalizedDescriptionKey: "Engine timed out after \(Int(timeoutSeconds))s"]
+                    )
+                )
+            }
+
             group.wait()
 
             let stdout = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
