@@ -16,9 +16,13 @@ class NetworkMonitor {
     private let queue = DispatchQueue(label: "com.offveil.networkmonitor", qos: .utility)
     private var lastInterfaceTypes: Set<NWInterface.InterfaceType> = []
     private var isMonitoring = false
+
+    // Debounce: only the serial `queue` touches these two properties,
+    // so no lock is needed.
+    private var pendingWorkItem: DispatchWorkItem?
     private var rebindTask: Task<Void, Never>?
 
-    private let stabilizationDelayNs: UInt64 = 1_200_000_000
+    private let debounceSeconds: Double = 1.5
     private let retryDelayNs: UInt64 = 1_000_000_000
     private let maxRebindAttempts = 3
 
@@ -40,7 +44,16 @@ class NetworkMonitor {
             guard currentTypes != self.lastInterfaceTypes else { return }
             self.lastInterfaceTypes = currentTypes
 
-            self.reapplyIfActive()
+            // Debounce: cancel any pending work and schedule a new one.
+            // We are already on `self.queue` (serial), so this is safe.
+            self.pendingWorkItem?.cancel()
+            self.rebindTask?.cancel()
+
+            let work = DispatchWorkItem { [weak self] in
+                self?.startRebind()
+            }
+            self.pendingWorkItem = work
+            self.queue.asyncAfter(deadline: .now() + self.debounceSeconds, execute: work)
         }
 
         monitor.start(queue: queue)
@@ -50,18 +63,18 @@ class NetworkMonitor {
         guard isMonitoring else { return }
         monitor.cancel()
         isMonitoring = false
+        pendingWorkItem?.cancel()
+        pendingWorkItem = nil
         rebindTask?.cancel()
         rebindTask = nil
     }
 
     // MARK: - Private
 
-    private func reapplyIfActive() {
+    private func startRebind() {
         rebindTask?.cancel()
         rebindTask = Task { [weak self] in
             guard let self else { return }
-            try? await Task.sleep(nanoseconds: stabilizationDelayNs)
-            guard !Task.isCancelled else { return }
 
             let statusResult = await EngineService.shared.getStatus()
             guard case .success(let data) = statusResult,
