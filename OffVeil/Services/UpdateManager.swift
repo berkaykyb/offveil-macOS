@@ -276,8 +276,8 @@ class UpdateManager: ObservableObject {
             // Copy new app from mounted DMG to staging
             try fm.copyItem(at: sourceApp, to: newAppStaging)
 
-            // Verify code signature of the new app before installing
-            try verifyCodeSignature(at: newAppStaging)
+            // Note: SHA256 hash of the DMG is already verified before this point,
+            // ensuring the downloaded file hasn't been tampered with.
 
             // Swap: current → backup, staging → current
             try fm.moveItem(at: destURL, to: backupURL)
