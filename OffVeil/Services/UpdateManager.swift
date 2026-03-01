@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import CryptoKit
 
 /// Manages in-app update checking, downloading, and installation via GitHub Releases.
 class UpdateManager: ObservableObject {
@@ -27,6 +28,7 @@ class UpdateManager: ObservableObject {
     // MARK: - Internal state
 
     private var dmgAssetURL: URL?
+    private var expectedDMGHash: String?
     private var downloadTask: URLSessionDownloadTask?
 
     private var apiURL: URL {
@@ -123,6 +125,25 @@ class UpdateManager: ObservableObject {
                             ($0["browser_download_url"] as? String).flatMap(URL.init(string:))
                         }
                 }
+
+                // Parse SHA256 hash from release body (format: "SHA256: <hex>")
+                if let body = json["body"] as? String {
+                    let lines = body.components(separatedBy: .newlines)
+                    for line in lines {
+                        let trimmed = line.trimmingCharacters(in: .whitespaces)
+                        if trimmed.uppercased().hasPrefix("SHA256:") {
+                            let hash = trimmed
+                                .dropFirst("SHA256:".count)
+                                .trimmingCharacters(in: .whitespaces)
+                                .lowercased()
+                            if !hash.isEmpty {
+                                expectedDMGHash = hash
+                            }
+                            break
+                        }
+                    }
+                }
+
                 updateAvailable = true
             } else {
                 updateAvailable = false
@@ -147,6 +168,18 @@ class UpdateManager: ObservableObject {
 
         do {
             let localURL = try await downloadDMG(from: assetURL)
+
+            // Verify SHA256 hash of downloaded DMG
+            if let expected = expectedDMGHash {
+                let actual = try computeSHA256(of: localURL)
+                guard actual == expected else {
+                    throw NSError(
+                        domain: "UpdateManager", code: -7,
+                        userInfo: [NSLocalizedDescriptionKey: "DMG hash doğrulaması başarısız. İndirilen dosya bozulmuş veya değiştirilmiş olabilir."]
+                    )
+                }
+            }
+
             await installFromDMG(at: localURL)
         } catch {
             errorMessage = error.localizedDescription
@@ -335,6 +368,13 @@ class UpdateManager: ObservableObject {
                 userInfo: [NSLocalizedDescriptionKey: "Code signature verification failed. The update may be tampered."]
             )
         }
+    }
+
+    /// Compute SHA256 hash of a file using CryptoKit.
+    private func computeSHA256(of fileURL: URL) throws -> String {
+        let data = try Data(contentsOf: fileURL)
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     private func relaunchApp(at appURL: URL) {
