@@ -26,3 +26,4 @@ scripts/install_access_binary.sh
 
 # Local Readme
 README_TR.md
+build/
