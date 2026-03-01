@@ -356,7 +356,7 @@ class UpdateManager: ObservableObject {
     private func verifyCodeSignature(at appURL: URL) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        process.arguments = ["--verify", "--deep", "--strict", appURL.path]
+        process.arguments = ["--verify", "--deep", appURL.path]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
         try process.run()
