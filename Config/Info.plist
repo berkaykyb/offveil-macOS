@@ -4,5 +4,11 @@
 <dict>
 	<key>LSUIElement</key>
 	<true/>
+	<key>CFBundleName</key>
+	<string>offveil</string>
+	<key>CFBundleDisplayName</key>
+	<string>offveil</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 </dict>
 </plist>
