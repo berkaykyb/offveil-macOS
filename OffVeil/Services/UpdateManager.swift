@@ -276,8 +276,9 @@ class UpdateManager: ObservableObject {
             // Copy new app from mounted DMG to staging
             try fm.copyItem(at: sourceApp, to: newAppStaging)
 
-            // Note: SHA256 hash of the DMG is already verified before this point,
-            // ensuring the downloaded file hasn't been tampered with.
+            // Remove macOS quarantine so Gatekeeper doesn't block the relaunched app.
+            // SHA256 hash of the DMG was already verified before this point.
+            removeQuarantine(at: newAppStaging)
 
             // Swap: current → backup, staging → current
             try fm.moveItem(at: destURL, to: backupURL)
@@ -377,6 +378,16 @@ class UpdateManager: ObservableObject {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
+    private func removeQuarantine(at appURL: URL) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
+        process.arguments = ["-cr", appURL.path]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        try? process.run()
+        process.waitUntilExit()
+    }
+
     private func relaunchApp(at appURL: URL) {
         // Mark that we're relaunching after an update so the new version can
         // auto-activate protection on launch.
@@ -387,15 +398,18 @@ class UpdateManager: ObservableObject {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["-g", "--fresh", appURL.path]
+        // Remove -g so the app comes to foreground, and use --fresh to ensure a clean launch
+        process.arguments = ["--fresh", appURL.path]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
 
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+        // Launch new app FIRST, then terminate self after a delay
+        DispatchQueue.global().async {
             try? process.run()
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        // Give the new app 1 second to start before the old one exits
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             NSApplication.shared.terminate(nil)
         }
     }
