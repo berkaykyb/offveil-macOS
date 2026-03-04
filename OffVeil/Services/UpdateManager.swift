@@ -392,24 +392,49 @@ class UpdateManager: ObservableObject {
         // Mark that we're relaunching after an update so the new version can
         // auto-activate protection on launch.
         UserDefaults.standard.set(true, forKey: "pendingRelaunchActivation")
-        // Tell AppDelegate to skip deactivation during this terminate —
-        // the new version will inherit the active protection state.
         UserDefaults.standard.set(true, forKey: "skipCleanupOnTerminate")
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        // Remove -g so the app comes to foreground, and use --fresh to ensure a clean launch
-        process.arguments = ["--fresh", appURL.path]
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
+        // Write a detached bash script to /tmp/ that survives app termination.
+        // When the Swift process dies, background DispatchQueue blocks die with it —
+        // but a child bash process launched with nohup lives on independently.
+        let scriptPath = "/tmp/offveil_relaunch.sh"
+        let appPath = appURL.path
+        let script = """
+        #!/bin/bash
+        sleep 1.5
+        xattr -cr "\(appPath)" 2>/dev/null
+        open "\(appPath)"
+        rm -f "\(scriptPath)"
+        """
 
-        // Launch new app FIRST, then terminate self after a delay
-        DispatchQueue.global().async {
-            try? process.run()
+        do {
+            try script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o755],
+                ofItemAtPath: scriptPath
+            )
+        } catch {
+            // Fallback: try direct open if script writing fails
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            p.arguments = ["--fresh", appPath]
+            try? p.run()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NSApplication.shared.terminate(nil)
+            }
+            return
         }
 
-        // Give the new app 1 second to start before the old one exits
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        // Launch the script fully detached using nohup so it outlives this process
+        let launcher = Process()
+        launcher.executableURL = URL(fileURLWithPath: "/bin/bash")
+        launcher.arguments = ["-c", "nohup bash \"\(scriptPath)\" >/dev/null 2>&1 &"]
+        launcher.standardOutput = Pipe()
+        launcher.standardError = Pipe()
+        try? launcher.run()
+
+        // Terminate after a short delay to let the script start
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApplication.shared.terminate(nil)
         }
     }
