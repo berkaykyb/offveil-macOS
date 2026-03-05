@@ -242,6 +242,21 @@ class UpdateManager: ObservableObject {
 
     // MARK: - Install
 
+    /// Resolve the actual installed path, bypassing App Translocation.
+    /// When Gatekeeper translocates, Bundle.main.bundleURL returns something like
+    /// /private/var/folders/.../AppTranslocation/.../offveil.app — read-only and temporary.
+    private var installedAppURL: URL {
+        let bundleURL = Bundle.main.bundleURL
+        let bundlePath = bundleURL.path
+
+        // Detect translocation
+        if bundlePath.contains("/AppTranslocation/") ||
+           bundlePath.hasPrefix("/private/var/folders/") {
+            return URL(fileURLWithPath: "/Applications/\(bundleURL.lastPathComponent)")
+        }
+        return bundleURL
+    }
+
     private func installFromDMG(at dmgPath: URL) async {
         do {
             // 1. Mount the DMG silently
@@ -257,40 +272,41 @@ class UpdateManager: ObservableObject {
 
             let sourceApp = URL(fileURLWithPath: mountPoint)
                 .appendingPathComponent(appName)
-            let currentAppURL = Bundle.main.bundleURL
 
-            // 3. Replace current app with new version
-            let destURL = currentAppURL
-
-            // Use a temporary staging location next to the app
-            let parentDir = destURL.deletingLastPathComponent()
-            let backupURL = parentDir.appendingPathComponent("OffVeil_old.app")
-            let newAppStaging = parentDir.appendingPathComponent("OffVeil_new.app")
-
+            // Use the REAL installed path, not the possibly-translocated Bundle path
+            let destURL = installedAppURL
             let fm = FileManager.default
 
-            // Clean up any previous staging artifacts
-            try? fm.removeItem(at: backupURL)
-            try? fm.removeItem(at: newAppStaging)
+            // Use /tmp for staging — always writable regardless of translocation
+            let stagingDir = URL(fileURLWithPath: "/tmp/offveil_update_staging")
+            try? fm.removeItem(at: stagingDir)
+            try fm.createDirectory(at: stagingDir, withIntermediateDirectories: true)
+
+            let newAppStaging = stagingDir.appendingPathComponent(destURL.lastPathComponent)
 
             // Copy new app from mounted DMG to staging
             try fm.copyItem(at: sourceApp, to: newAppStaging)
 
-            // Remove macOS quarantine so Gatekeeper doesn't block the relaunched app.
-            // SHA256 hash of the DMG was already verified before this point.
+            // Remove quarantine so Gatekeeper doesn't block the relaunched app
             removeQuarantine(at: newAppStaging)
 
-            // Swap: current → backup, staging → current
-            try fm.moveItem(at: destURL, to: backupURL)
+            // Backup the old app, then swap
+            let backupURL = stagingDir.appendingPathComponent("offveil_backup.app")
+            if fm.fileExists(atPath: destURL.path) {
+                try fm.moveItem(at: destURL, to: backupURL)
+            }
             try fm.moveItem(at: newAppStaging, to: destURL)
 
-            // Clean up backup
-            try? fm.removeItem(at: backupURL)
+            // Remove quarantine on the final installed location too
+            removeQuarantine(at: destURL)
 
-            // 4. Unmount DMG
+            // Clean up
+            try? fm.removeItem(at: stagingDir)
+
+            // 3. Unmount DMG
             unmountDMG(mountPoint: mountPoint)
 
-            // 5. Relaunch
+            // 4. Relaunch from the real /Applications path
             relaunchApp(at: destURL)
 
         } catch {
