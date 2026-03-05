@@ -243,13 +243,9 @@ class UpdateManager: ObservableObject {
     // MARK: - Install
 
     /// Resolve the actual installed path, bypassing App Translocation.
-    /// When Gatekeeper translocates, Bundle.main.bundleURL returns something like
-    /// /private/var/folders/.../AppTranslocation/.../offveil.app — read-only and temporary.
     private var installedAppURL: URL {
         let bundleURL = Bundle.main.bundleURL
         let bundlePath = bundleURL.path
-
-        // Detect translocation
         if bundlePath.contains("/AppTranslocation/") ||
            bundlePath.hasPrefix("/private/var/folders/") {
             return URL(fileURLWithPath: "/Applications/\(bundleURL.lastPathComponent)")
@@ -257,63 +253,93 @@ class UpdateManager: ObservableObject {
         return bundleURL
     }
 
+    /// Instead of swapping files while the app is running (which macOS blocks),
+    /// we write a bash script that does EVERYTHING after the app quits.
     private func installFromDMG(at dmgPath: URL) async {
+        let appDest = installedAppURL.path
+        let dmgFile = dmgPath.path
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let scriptPath = "/tmp/offveil_updater.sh"
+
+        // The bash script will:
+        // 1. Wait for this process to die
+        // 2. Mount the DMG
+        // 3. Remove the old app
+        // 4. Copy the new app from DMG
+        // 5. Remove quarantine
+        // 6. Unmount DMG
+        // 7. Open the new app
+        // 8. Clean up
+        let script = """
+        #!/bin/bash
+        # Wait for the old app process to fully exit
+        while kill -0 \(pid) 2>/dev/null; do
+            sleep 0.5
+        done
+        sleep 1
+
+        # Mount the downloaded DMG
+        MOUNT_OUTPUT=$(/usr/bin/hdiutil attach "\(dmgFile)" -nobrowse -noverify -noautoopen 2>/dev/null)
+        MOUNT_POINT=$(echo "$MOUNT_OUTPUT" | grep -o '/Volumes/[^\t]*' | head -1)
+
+        if [ -z "$MOUNT_POINT" ]; then
+            exit 1
+        fi
+
+        # Find the .app inside the mounted DMG
+        APP_NAME=$(ls "$MOUNT_POINT" | grep '\\.app$' | head -1)
+        if [ -z "$APP_NAME" ]; then
+            /usr/bin/hdiutil detach "$MOUNT_POINT" -force 2>/dev/null
+            exit 1
+        fi
+
+        # Remove old app and copy new one
+        rm -rf "\(appDest)"
+        cp -R "$MOUNT_POINT/$APP_NAME" "\(appDest)"
+
+        # Remove quarantine attributes
+        /usr/bin/xattr -cr "\(appDest)" 2>/dev/null
+
+        # Unmount DMG
+        /usr/bin/hdiutil detach "$MOUNT_POINT" -force 2>/dev/null
+
+        # Clean up downloaded DMG
+        rm -f "\(dmgFile)"
+
+        # Open the new app
+        open "\(appDest)"
+
+        # Self-delete
+        rm -f "\(scriptPath)"
+        """
+
         do {
-            // 1. Mount the DMG silently
-            let mountPoint = try mountDMG(at: dmgPath)
-
-            // 2. Find the .app inside
-            guard let appName = try findApp(in: mountPoint) else {
-                throw NSError(
-                    domain: "UpdateManager", code: -3,
-                    userInfo: [NSLocalizedDescriptionKey: "No .app found in DMG"]
-                )
-            }
-
-            let sourceApp = URL(fileURLWithPath: mountPoint)
-                .appendingPathComponent(appName)
-
-            // Use the REAL installed path, not the possibly-translocated Bundle path
-            let destURL = installedAppURL
-            let fm = FileManager.default
-
-            // Use /tmp for staging — always writable regardless of translocation
-            let stagingDir = URL(fileURLWithPath: "/tmp/offveil_update_staging")
-            try? fm.removeItem(at: stagingDir)
-            try fm.createDirectory(at: stagingDir, withIntermediateDirectories: true)
-
-            let newAppStaging = stagingDir.appendingPathComponent(destURL.lastPathComponent)
-
-            // Copy new app from mounted DMG to staging
-            try fm.copyItem(at: sourceApp, to: newAppStaging)
-
-            // Remove quarantine so Gatekeeper doesn't block the relaunched app
-            removeQuarantine(at: newAppStaging)
-
-            // Backup the old app, then swap
-            let backupURL = stagingDir.appendingPathComponent("offveil_backup.app")
-            if fm.fileExists(atPath: destURL.path) {
-                try fm.moveItem(at: destURL, to: backupURL)
-            }
-            try fm.moveItem(at: newAppStaging, to: destURL)
-
-            // Remove quarantine on the final installed location too
-            removeQuarantine(at: destURL)
-
-            // Clean up
-            try? fm.removeItem(at: stagingDir)
-
-            // 3. Unmount DMG
-            unmountDMG(mountPoint: mountPoint)
-
-            // 4. Relaunch from the real /Applications path
-            relaunchApp(at: destURL)
-
+            try script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: scriptPath
+            )
         } catch {
             await MainActor.run {
-                self.errorMessage = error.localizedDescription
+                self.errorMessage = "Failed to prepare update script"
                 self.isDownloading = false
             }
+            return
+        }
+
+        // Launch the updater script fully detached
+        let launcher = Process()
+        launcher.executableURL = URL(fileURLWithPath: "/bin/bash")
+        launcher.arguments = ["-c", "nohup \"\(scriptPath)\" >/dev/null 2>&1 &"]
+        launcher.standardOutput = Pipe()
+        launcher.standardError = Pipe()
+        try? launcher.run()
+
+        // Give the script a moment to start, then quit
+        UserDefaults.standard.set(true, forKey: "pendingRelaunchActivation")
+        UserDefaults.standard.set(true, forKey: "skipCleanupOnTerminate")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NSApplication.shared.terminate(nil)
         }
     }
 
@@ -394,66 +420,8 @@ class UpdateManager: ObservableObject {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
-    private func removeQuarantine(at appURL: URL) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
-        process.arguments = ["-cr", appURL.path]
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
-        try? process.run()
-        process.waitUntilExit()
-    }
 
-    private func relaunchApp(at appURL: URL) {
-        // Mark that we're relaunching after an update so the new version can
-        // auto-activate protection on launch.
-        UserDefaults.standard.set(true, forKey: "pendingRelaunchActivation")
-        UserDefaults.standard.set(true, forKey: "skipCleanupOnTerminate")
 
-        // Write a detached bash script to /tmp/ that survives app termination.
-        // When the Swift process dies, background DispatchQueue blocks die with it —
-        // but a child bash process launched with nohup lives on independently.
-        let scriptPath = "/tmp/offveil_relaunch.sh"
-        let appPath = appURL.path
-        let script = """
-        #!/bin/bash
-        sleep 1.5
-        xattr -cr "\(appPath)" 2>/dev/null
-        open "\(appPath)"
-        rm -f "\(scriptPath)"
-        """
-
-        do {
-            try script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes(
-                [.posixPermissions: 0o755],
-                ofItemAtPath: scriptPath
-            )
-        } catch {
-            // Fallback: try direct open if script writing fails
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            p.arguments = ["--fresh", appPath]
-            try? p.run()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                NSApplication.shared.terminate(nil)
-            }
-            return
-        }
-
-        // Launch the script fully detached using nohup so it outlives this process
-        let launcher = Process()
-        launcher.executableURL = URL(fileURLWithPath: "/bin/bash")
-        launcher.arguments = ["-c", "nohup bash \"\(scriptPath)\" >/dev/null 2>&1 &"]
-        launcher.standardOutput = Pipe()
-        launcher.standardError = Pipe()
-        try? launcher.run()
-
-        // Terminate after a short delay to let the script start
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NSApplication.shared.terminate(nil)
-        }
-    }
 
     // MARK: - Version comparison
 
