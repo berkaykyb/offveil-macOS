@@ -1,0 +1,18 @@
+Copyright (c) 2025-2026 Berkay Kayabasi. All Rights Reserved.
+
+This software and its source code are made publicly available for transparency
+and educational purposes only. No permission is granted to copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of this software, in whole
+or in part, without explicit written permission from the copyright holder.
+
+The source code of this project may be viewed on GitHub, but viewing does not
+grant any rights to use, reproduce, or distribute the code.
+
+Third-Party Components:
+
+This project uses SpoofDPI (https://github.com/xvzc/SpoofDPI), which is
+licensed under the Apache License 2.0. SpoofDPI's license terms apply solely
+to SpoofDPI and do not extend to or affect the licensing of this project.
+
+For inquiries regarding licensing or usage permissions, please contact the
+copyright holder through GitHub.

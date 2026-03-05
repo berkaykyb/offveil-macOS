@@ -8,9 +8,13 @@
 
 <p align="center">
   <a href="https://github.com/berkaykyb/offveil-macOS/releases"><img src="https://img.shields.io/github/v/release/berkaykyb/offveil-macOS?style=flat-square&color=00c896&label=release" alt="Release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square" alt="License" /></a>
   <a href="https://github.com/berkaykyb/offveil-macOS/stargazers"><img src="https://img.shields.io/github/stars/berkaykyb/offveil-macOS?style=flat-square&color=ffcc00" alt="Stars" /></a>
   <a href="https://github.com/berkaykyb/offveil-macOS/releases"><img src="https://img.shields.io/github/downloads/berkaykyb/offveil-macOS/total?style=flat-square&color=00c896&label=downloads" alt="Downloads" /></a>
+</p>
+
+<p align="center">
+  <a href="README_TR.md">Turkce</a>
 </p>
 
 <p align="center">
@@ -38,7 +42,6 @@ Everything happens on-device, ensuring maximum privacy and zero latency overhead
 - **Robust Recovery:** A built-in watchdog process ensures your system proxy settings are always restored gracefully, even if the application shuts down unexpectedly.
 - **Auto-configuration:** Dynamically manages macOS system proxy settings (`networksetup`) without requiring manual terminal commands.
 - **Energy Efficient:** Built specifically for macOS, running quietly in the background with minimal resource footprint.
-- **ISP Identification:** Automatically detects and clearly displays your active Internet Service Provider based on your public IP.
 - **Auto-updates:** Stays current seamlessly via GitHub Releases.
 
 ---
@@ -105,10 +108,16 @@ The landscape of DPI bypass tools focuses heavily on command-line utilities. Off
 
 ## Installation
 
-1. Download the latest `.dmg` file from the **[Releases](https://github.com/berkaykyb/offveil-macOS/releases)** page.
-2. Open the downloaded `OffVeil.dmg` file.
-3. Drag the **OffVeil** application icon into your **Applications** folder.
-4. **Important for the first launch:** Navigate to your Applications folder, **Right-click (or Control-click)** on OffVeil, and select **Open**. This bypasses the macOS Gatekeeper warning for independent developers.
+1. Download the latest `offveil.dmg` from the **[Releases](https://github.com/berkaykyb/offveil-macOS/releases)** page.
+2. Open the downloaded `.dmg` file.
+3. Drag the **offveil** application into your **Applications** folder.
+4. **First launch only:** Since offveil is not distributed through the App Store, macOS requires a one-time approval. Open **Terminal** and run:
+   ```bash
+   xattr -cr /Applications/offveil.app
+   ```
+5. Open **offveil** from your Applications folder.
+
+After this initial setup, offveil will open normally on all subsequent launches. Updates are handled automatically from within the app.
 
 *Requires macOS 13 Ventura or later. Fully native on both Apple Silicon (M-series) and Intel architectures.*
 
@@ -139,7 +148,7 @@ If offveil has successfully lifted the veil for you and restored your access to 
 
 ## Acknowledgements & Licensing
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details. This means offveil-macOS is fully open-source, and you are free to use, modify, and distribute the code under the terms of the MIT license.
+This project is **All Rights Reserved**. The source code is made publicly available on GitHub for transparency and educational purposes only. No permission is granted to copy, modify, or distribute the code without explicit written consent from the author. See the [LICENSE](LICENSE) file for full terms.
 
 OffVeil (macOS) v1.x utilizes the excellent open-source project **[SpoofDPI](https://github.com/xvzc/SpoofDPI)** by [@xvzc](https://github.com/xvzc) for its core packet fragmentation capabilities. SpoofDPI is licensed under the [Apache License 2.0](https://github.com/xvzc/SpoofDPI/blob/main/LICENSE).
 
