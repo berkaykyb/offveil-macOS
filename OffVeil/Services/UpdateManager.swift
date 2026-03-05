@@ -260,57 +260,84 @@ class UpdateManager: ObservableObject {
         let dmgFile = dmgPath.path
         let pid = ProcessInfo.processInfo.processIdentifier
         let scriptPath = "/tmp/offveil_updater.sh"
+        let logPath = "/tmp/offveil_update.log"
 
-        // The bash script will:
-        // 1. Wait for this process to die
-        // 2. Mount the DMG
-        // 3. Remove the old app
-        // 4. Copy the new app from DMG
-        // 5. Remove quarantine
-        // 6. Unmount DMG
-        // 7. Open the new app
-        // 8. Clean up
         let script = """
         #!/bin/bash
+        LOG="\(logPath)"
+        echo "=== OffVeil Updater ===" > "$LOG"
+        echo "PID to wait for: \(pid)" >> "$LOG"
+        echo "DMG: \(dmgFile)" >> "$LOG"
+        echo "Dest: \(appDest)" >> "$LOG"
+        date >> "$LOG"
+
         # Wait for the old app process to fully exit
+        echo "Waiting for process to exit..." >> "$LOG"
         while kill -0 \(pid) 2>/dev/null; do
             sleep 0.5
         done
+        echo "Process exited" >> "$LOG"
         sleep 1
 
         # Mount the downloaded DMG
-        MOUNT_OUTPUT=$(/usr/bin/hdiutil attach "\(dmgFile)" -nobrowse -noverify -noautoopen 2>/dev/null)
-        MOUNT_POINT=$(echo "$MOUNT_OUTPUT" | grep -o '/Volumes/[^\t]*' | head -1)
+        echo "Mounting DMG..." >> "$LOG"
+        MOUNT_INFO=$(/usr/bin/hdiutil attach "\(dmgFile)" -nobrowse -noverify -noautoopen -plist 2>&1)
+        echo "hdiutil output: $MOUNT_INFO" >> "$LOG"
+
+        # Parse mount point from plist output
+        MOUNT_POINT=$(echo "$MOUNT_INFO" | grep -A1 "mount-point" | grep string | sed 's/.*<string>//' | sed 's/<\\/string>.*//')
+        echo "Mount point: $MOUNT_POINT" >> "$LOG"
 
         if [ -z "$MOUNT_POINT" ]; then
+            echo "ERROR: No mount point found" >> "$LOG"
             exit 1
         fi
 
         # Find the .app inside the mounted DMG
+        echo "Contents of mount point:" >> "$LOG"
+        ls -la "$MOUNT_POINT" >> "$LOG" 2>&1
         APP_NAME=$(ls "$MOUNT_POINT" | grep '\\.app$' | head -1)
+        echo "App name: $APP_NAME" >> "$LOG"
+
         if [ -z "$APP_NAME" ]; then
+            echo "ERROR: No .app found" >> "$LOG"
             /usr/bin/hdiutil detach "$MOUNT_POINT" -force 2>/dev/null
             exit 1
         fi
 
-        # Remove old app and copy new one
-        rm -rf "\(appDest)"
-        cp -R "$MOUNT_POINT/$APP_NAME" "\(appDest)"
+        # Remove old app
+        echo "Removing old app at $APPD..." >> "$LOG"
+        rm -rf "\(appDest)" 2>> "$LOG"
+        echo "rm result: $?" >> "$LOG"
 
-        # Remove quarantine attributes
+        # Copy new app
+        echo "Copying new app..." >> "$LOG"
+        cp -R "$MOUNT_POINT/$APP_NAME" "\(appDest)" 2>> "$LOG"
+        echo "cp result: $?" >> "$LOG"
+
+        # Remove quarantine
         /usr/bin/xattr -cr "\(appDest)" 2>/dev/null
+        echo "quarantine removed" >> "$LOG"
 
         # Unmount DMG
         /usr/bin/hdiutil detach "$MOUNT_POINT" -force 2>/dev/null
+        echo "DMG unmounted" >> "$LOG"
 
         # Clean up downloaded DMG
         rm -f "\(dmgFile)"
 
-        # Open the new app
-        open "\(appDest)"
+        # Verify the new app exists
+        echo "Verifying install:" >> "$LOG"
+        ls -la "\(appDest)/" >> "$LOG" 2>&1
+        ls -la "\(appDest)/Contents/MacOS/" >> "$LOG" 2>&1
 
-        # Self-delete
-        rm -f "\(scriptPath)"
+        # Open the new app
+        echo "Opening app..." >> "$LOG"
+        open "\(appDest)" 2>> "$LOG"
+        echo "open result: $?" >> "$LOG"
+
+        echo "=== DONE ===" >> "$LOG"
+        date >> "$LOG"
         """
 
         do {
@@ -326,12 +353,13 @@ class UpdateManager: ObservableObject {
             return
         }
 
-        // Launch the updater script fully detached
+        // Launch the updater script directly as a detached process
         let launcher = Process()
-        launcher.executableURL = URL(fileURLWithPath: "/bin/bash")
-        launcher.arguments = ["-c", "nohup \"\(scriptPath)\" >/dev/null 2>&1 &"]
-        launcher.standardOutput = Pipe()
-        launcher.standardError = Pipe()
+        launcher.executableURL = URL(fileURLWithPath: scriptPath)
+        launcher.arguments = []
+        launcher.standardOutput = FileHandle.nullDevice
+        launcher.standardError = FileHandle.nullDevice
+        launcher.qualityOfService = .background
         try? launcher.run()
 
         // Give the script a moment to start, then quit
