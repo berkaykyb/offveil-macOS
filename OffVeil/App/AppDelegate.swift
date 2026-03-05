@@ -17,6 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private var statusChangeObserver: NSObjectProtocol?
     private let settings = SettingsManager.shared
+    private var isRelaunchFromUpdate = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -31,6 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if UserDefaults.standard.bool(forKey: "pendingRelaunchActivation") {
             UserDefaults.standard.removeObject(forKey: "pendingRelaunchActivation")
             UserDefaults.standard.set(true, forKey: "lastKnownProtectionState")
+            isRelaunchFromUpdate = true
             Task.detached { [weak self] in
                 _ = await EngineService.shared.executeCommand("activate")
                 await self?.refreshStatusItemIcon()
@@ -249,6 +251,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             if self.settings.autoActivateOnLaunch {
                 await self.activateProtectionIfNeeded()
                 await self.refreshStatusItemIcon()
+            }
+
+            // After update relaunch → don't auto-open popover (engine still activating)
+            if self.isRelaunchFromUpdate {
+                return
             }
 
             // First install → always show popover so user discovers the app.
