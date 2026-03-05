@@ -26,7 +26,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             button.target = self
             updateStatusItemIcon(isActive: false)
         }
-        
+
+        // Check relaunch flag BEFORE creating popover so UI reads correct state
+        if UserDefaults.standard.bool(forKey: "pendingRelaunchActivation") {
+            UserDefaults.standard.removeObject(forKey: "pendingRelaunchActivation")
+            UserDefaults.standard.set(true, forKey: "lastKnownProtectionState")
+            Task.detached { [weak self] in
+                _ = await EngineService.shared.executeCommand("activate")
+                await self?.refreshStatusItemIcon()
+            }
+        }
+
         popover = NSPopover()
         popover?.contentSize = NSSize(width: 320, height: 450)
         popover?.behavior = .semitransient
@@ -38,15 +48,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         NetworkMonitor.shared.startMonitoring()
         UpdateManager.shared.startPeriodicChecks()
         NotificationService.shared.requestAuthorization()
-
-        // If we relaunched after an update, re-activate protection automatically.
-        if UserDefaults.standard.bool(forKey: "pendingRelaunchActivation") {
-            UserDefaults.standard.removeObject(forKey: "pendingRelaunchActivation")
-            Task.detached { [weak self] in
-                _ = await EngineService.shared.executeCommand("activate")
-                await self?.refreshStatusItemIcon()
-            }
-        }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self else { return }
