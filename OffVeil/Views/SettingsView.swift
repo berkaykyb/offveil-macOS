@@ -160,10 +160,6 @@ struct SettingsView: View {
                 Divider().overlay(Color.white.opacity(0.08))
 
                 SettingsValueRow(title: localized(.versionLabel), value: appVersion)
-
-                Divider().overlay(Color.white.opacity(0.08))
-
-                SettingsValueRow(title: localized(.buildLabel), value: appBuild)
             }
 
             SettingsSectionCard(title: localized(.legalSection)) {

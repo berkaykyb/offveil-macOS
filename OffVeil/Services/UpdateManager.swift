@@ -365,6 +365,7 @@ class UpdateManager: ObservableObject {
         // Give the script a moment to start, then quit
         UserDefaults.standard.set(true, forKey: "pendingRelaunchActivation")
         UserDefaults.standard.set(true, forKey: "skipCleanupOnTerminate")
+        UserDefaults.standard.set(true, forKey: "lastKnownProtectionState")
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApplication.shared.terminate(nil)
