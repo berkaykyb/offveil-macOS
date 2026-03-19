@@ -17,12 +17,6 @@
   <a href="README_TR.md">Turkce</a>
 </p>
 
-<p align="center">
-  <blockquote>
-    <strong>This is the official macOS counterpart to <a href="https://github.com/erayselim/offveil">OffVeil for Windows</a>.</strong> While the platforms differ, the mission is identical: lifting the veil and removing barriers between you and the open internet.
-  </blockquote>
-</p>
-
 ---
 
 ## What is offveil?
@@ -67,13 +61,11 @@ Everything happens on-device, ensuring maximum privacy and zero latency overhead
 
 ## Technical Architecture & The Road to v2.0
 
-Currently (Beta), OffVeil for macOS utilizes [SpoofDPI](https://github.com/xvzc/SpoofDPI) as its core packet-processing engine. The application establishes a local proxy (`127.0.0.1:18080`) and automatically routes all system HTTP/HTTPS traffic through it to perform TLS ClientHello fragmentation.
+Currently (v1.x), OffVeil for macOS utilizes [SpoofDPI](https://github.com/xvzc/SpoofDPI) as its core packet-processing engine. The application establishes a local proxy (`127.0.0.1:18080`) and automatically routes all system HTTP/HTTPS traffic through it to perform TLS ClientHello fragmentation.
 
 ### Why not kernel-level interception yet?
 
-You might notice that the [Windows version of OffVeil](https://github.com/erayselim/offveil) performs packet interception at the kernel level (using WinDivert) without relying on proxies. 
-
-We strongly share this vision for macOS. However, developing a kernel-level network filter on Apple platforms requires implementing a **Network Extension**. Apple strictly gates this entitlement behind the **Apple Developer Program**. Without an active and approved developer account, code containing Network Extensions cannot be signed, tested, or executed on typical user machines.
+Developing a kernel-level network filter on Apple platforms requires implementing a **Network Extension**. Apple strictly gates this entitlement behind the **Apple Developer Program**. Without an active and approved developer account, code containing Network Extensions cannot be signed, tested, or executed on typical user machines.
 
 ### The v2.0 Vision
 
@@ -83,7 +75,7 @@ Upon securing an Apple Developer account, our immediate roadmap includes:
 
 1. Developing a native, **Swift-based Network Extension** for kernel-level packet manipulation.
 2. Completely dropping the local HTTP proxy architecture.
-3. Achieving a zero-overhead, hyper-efficient DPI bypass identical in philosophy to our Windows counterpart.
+3. Achieving a zero-overhead, hyper-efficient DPI bypass with no proxy latency overhead.
 
 Until then, OffVeil provides the most robust GUI and lifecycle management wrapper available for macOS DPI bypassing.
 
@@ -91,18 +83,19 @@ Until then, OffVeil provides the most robust GUI and lifecycle management wrappe
 
 ## Comparison
 
-The landscape of DPI bypass tools focuses heavily on command-line utilities. OffVeil aims to bridge the gap between technical efficacy and user accessibility.
+The macOS DPI bypass ecosystem is sparse and heavily CLI-oriented. OffVeil bridges the gap between technical efficacy and everyday usability on Apple platforms.
 
-| Feature | **offveil (macOS)** | **offveil (Windows)** | SpoofDPI | ByeDPI |
-|---------|:-----------:|:-------------------:|:--------:|:------:|
-| **Platform** | **macOS** | Windows | Win, Linux, macOS | Win, Linux, macOS |
-| **Interface** | **Native GUI** | Native GUI | CLI | CLI |
-| **Bypass Method** | **Local Proxy** *(v1)* | Kernel-level | HTTP Proxy | SOCKS Proxy |
-| **System Proxy Mgt** | **Automatic** | N/A (Kernel) | Manual | Manual |
-| **Network Rebind** | **Automatic** | N/A | Manual | Manual |
-| **Crash Recovery** | **Automatic** | Automatic | N/A | N/A |
-| **Auto-update** | **Yes** | Yes | No | No |
-| **Usage** | **Background App** | Background App | Terminal Session | Terminal Session |
+| Feature | **offveil (macOS)** | SpoofDPI (raw) | ByeDPI (raw) | Surge |
+|---------|:-----------:|:--------:|:------:|:-----:|
+| **Platform** | **macOS** | macOS | macOS | macOS |
+| **Interface** | **Native GUI** | CLI | CLI | Native GUI |
+| **Bypass Method** | **DPI Bypass via Local Proxy** | HTTP Proxy | SOCKS Proxy | Rules-based Proxy |
+| **System Proxy Mgt** | **Automatic** | Manual | Manual | Automatic |
+| **Network Rebind** | **Automatic** | Manual | Manual | Manual |
+| **Crash Recovery** | **Automatic** | N/A | N/A | N/A |
+| **Auto-update** | **Yes** | No | No | Yes |
+| **Price** | **Free** | Free | Free | Paid (~$50+) |
+| **Usage** | **Background App** | Terminal Session | Terminal Session | Background App |
 
 ---
 
@@ -152,7 +145,7 @@ This project is **All Rights Reserved**. The source code is made publicly availa
 
 OffVeil (macOS) v1.x utilizes the excellent open-source project **[SpoofDPI](https://github.com/xvzc/SpoofDPI)** by [@xvzc](https://github.com/xvzc) for its core packet fragmentation capabilities. SpoofDPI is licensed under the [Apache License 2.0](https://github.com/xvzc/SpoofDPI/blob/main/LICENSE).
 
-A special thanks to **[@erayselim](https://github.com/erayselim)** for creating [OffVeil for Windows](https://github.com/erayselim/offveil) and establishing the vision for this suite of tools.
+A special thanks to **[@erayselim](https://github.com/erayselim)** for inspiring the original vision behind this project.
 
 <p align="center">
   <sub>Lifting the veil. Restoring the open web.</sub>

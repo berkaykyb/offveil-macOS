@@ -15,11 +15,6 @@
 <p align="center">
   <a href="README.md">English</a>
 </p>
-<p align="center">
-  <blockquote>
-    <strong>Bu, <a href="https://github.com/erayselim/offveil">OffVeil Windows</a>'un resmi macOS karşılığıdır.</strong> Platformlar farklı olsa da misyonumuz aynı: Perdeyi (veil) kaldırmak ve açık internet ile aranızdaki engelleri yok etmek.
-  </blockquote>
-</p>
 
 ---
 
@@ -69,9 +64,7 @@ Her şey cihazınızda gerçekleşir; bu da maksimum gizlilik ve sıfır gecikme
 
 ### Neden henüz kernel seviyesinde müdahale etmiyoruz?
 
-OffVeil'in [Windows versiyonunun](https://github.com/erayselim/offveil) proxy'ye dayanmadan çekirdek (kernel) düzeyinde paketlere müdahale ettiğini (WinDivert kullanarak) fark edebilirsiniz.
-
-Bu vizyonu macOS için de güçlü bir şekilde paylaşıyoruz. Ancak, Apple platformlarında kernel düzeyinde bir ağ filtresi geliştirmek bir **Network Extension (Ağ Uzantısı)** uygulamayı gerektirir. Apple, bu yetkiyi kesin ve katı bir şekilde **Apple Developer Programı** arkasında tutmaktadır. Aktif ve onaylanmış bir geliştirici hesabı olmadan, Network Extension içeren kodlar sıradan kullanıcı makinelerinde imzalanamaz, test edilemez veya çalıştırılamaz.
+Apple platformlarında kernel düzeyinde bir ağ filtresi geliştirmek bir **Network Extension (Ağ Uzantısı)** uygulamayı gerektirir. Apple, bu yetkiyi kesin ve katı bir şekilde **Apple Developer Programı** arkasında tutmaktadır. Aktif ve onaylanmış bir geliştirici hesabı olmadan, Network Extension içeren kodlar sıradan kullanıcı makinelerinde imzalanamaz, test edilemez veya çalıştırılamaz.
 
 ### v2.0 Vizyonumuz
 
@@ -81,7 +74,7 @@ Bir Apple Geliştirici hesabı (Apple Developer Account) temin ettiğimizde acil
 
 1. Çekirdek (kernel) düzeyinde paket manipülasyonu için native, **Swift tabanlı bir Network Extension** geliştirmek.
 2. Yerel HTTP proxy mimarisini tamamen terk etmek.
-3. Felsefe olarak Windows muadilimizle tıpatıp aynı olan sıfır ek yük (zero-overhead) hiper-verimli bir DPI bypass mimarisine ulaşmak.
+3. Herhangi bir proxy gecikmesi olmaksızın sıfır ek yük (zero-overhead) hiper-verimli bir DPI bypass mimarisine ulaşmak.
 
 O zamana kadar OffVeil, macOS DPI bypass ekosisteminde bulunan en sağlam ve yönetilebilir arayüzü sunmaya devam edecek.
 
@@ -89,18 +82,19 @@ O zamana kadar OffVeil, macOS DPI bypass ekosisteminde bulunan en sağlam ve yö
 
 ## Karşılaştırma
 
-DPI bypass araçları genellikle komut satırı (CLI) uygulamaları etrafında şekillenmiştir. OffVeil, teknik etkinlik ile kullanıcı erişilebilirliği arasındaki bu boşluğu doldurmayı hedefler.
+macOS DPI bypass ekosistemi büyük ölçüde komut satırı (CLI) araçlarından oluşmaktadır. OffVeil, teknik etkinlik ile Apple platformlarında günlük kullanım kolaylığı arasındaki bu boşluğu doldurmayı hedefler.
 
-| Özellik | **offveil (macOS)** | **offveil (Windows)** | SpoofDPI | ByeDPI |
-|---------|:-----------:|:-------------------:|:--------:|:------:|
-| **Platform** | **macOS** | Windows | Win, Linux, macOS | Win, Linux, macOS |
-| **Arayüz (UI)** | **Native GUI** | Native GUI | CLI (Terminal) | CLI (Terminal) |
-| **Bypass Yöntemi** | **Yerel Proxy** *(v1)* | Kernel-level | HTTP Proxy | SOCKS Proxy |
-| **Sistem Proxy Yön.**| **Otomatik** | Uygulanamaz (Kernel) | Manuel | Manuel |
-| **Ağ Değişimi Tespiti**| **Otomatik** | Uygulanamaz | Manuel | Manuel |
-| **Çökme Kurtarma** | **Otomatik** | Otomatik | Yok | Yok |
-| **Oto-Güncelleme** | **Evet** | Evet | Hayır | Hayır |
-| **Kullanım** | **Arka Plan Uygulaması**| Arka Plan Uygulaması | Terminal Oturumu | Terminal Oturumu |
+| Özellik | **offveil (macOS)** | SpoofDPI (ham) | ByeDPI (ham) | Surge |
+|---------|:-----------:|:--------:|:------:|:-----:|
+| **Platform** | **macOS** | macOS | macOS | macOS |
+| **Arayüz (UI)** | **Native GUI** | CLI (Terminal) | CLI (Terminal) | Native GUI |
+| **Bypass Yöntemi** | **DPI Bypass (Yerel Proxy)** | HTTP Proxy | SOCKS Proxy | Kural Tabanlı Proxy |
+| **Sistem Proxy Yön.**| **Otomatik** | Manuel | Manuel | Otomatik |
+| **Ağ Değişimi Tespiti**| **Otomatik** | Manuel | Manuel | Manuel |
+| **Çökme Kurtarma** | **Otomatik** | Yok | Yok | Yok |
+| **Oto-Güncelleme** | **Evet** | Hayır | Hayır | Evet |
+| **Fiyat** | **Ücretsiz** | Ücretsiz | Ücretsiz | Ücretli (~$50+) |
+| **Kullanım** | **Arka Plan Uygulaması**| Terminal Oturumu | Terminal Oturumu | Arka Plan Uygulaması |
 
 ---
 
@@ -150,7 +144,7 @@ Bu proje **Tüm Hakları Saklıdır (All Rights Reserved)** lisansı altındadı
 
 OffVeil (macOS) v1.x, temel paket parçalama yetenekleri için açık kaynaklı **[SpoofDPI](https://github.com/xvzc/SpoofDPI)** projesini ([@xvzc](https://github.com/xvzc)) kullanmaktadır. SpoofDPI uygulaması [Apache License 2.0](https://github.com/xvzc/SpoofDPI/blob/main/LICENSE) lisansına sahiptir.
 
-Bu araç setinin vizyonunu ortaya koyan ve [OffVeil Windows](https://github.com/erayselim/offveil) sürümünün yaratıcısı olan takım arkadaşım **[@erayselim](https://github.com/erayselim)**'e özel teşekkürler.
+Bu projenin vizyonunu ilk oluşturan takım arkadaşım **[@erayselim](https://github.com/erayselim)**'e özel teşekkürler.
 
 <p align="center">
   <sub>Perdeyi kaldırıyoruz. Açık webi geri getiriyoruz.</sub>
