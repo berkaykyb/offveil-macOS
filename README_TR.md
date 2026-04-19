@@ -2,7 +2,7 @@
 </p>
 
 <h3 align="center">
-  macOS için Native DPI aşma motoru - VPN yok, harici sunucu yok, hız kaybı yok.
+  macOS için Native ağ gizliliği motoru - VPN yok, harici sunucu yok, hız kaybı yok.
 </h3>
 
 <p align="center">
@@ -20,9 +20,9 @@
 
 ## offveil Nedir?
 
-**offveil** (off the veil - *perdenin ötesi*), **Derin Paket İncelemesi (DPI)** kısıtlamalarını zahmetsizce aşmak için tasarlanmış hafif bir sistem tepsisi (menu bar) uygulamasıdır.
+**offveil** (off the veil - *perdenin ötesi*), İnternet Servis Sağlayıcılarının (İSS) ağ trafiğinizi alan adı (SNI) bilgisine göre analiz etmesine ve kısıtlamasına olanak tanıyan **Derin Paket İncelemesi (DPI)** tekniğine karşı bağlantınızı koruyan hafif bir sistem menüsü uygulamasıdır.
 
-Geleneksel VPN'lerin aksine, OffVeil **trafiğinizi asla üçüncü taraf sunucular üzerinden yönlendirmez**. Tamamen yerel makinenizde çalışır. Bağlantınız doğrudan kalır ve indirme/yükleme hızlarınızdan ödün verilmez - değişen tek şey, İSS'lerin (İnternet Servis Sağlayıcıları) trafiğinizi alan adlarına (SNI) göre artık inceleyememesi veya engelleyememesidir.
+Geleneksel VPN'lerin aksine, OffVeil **trafiğinizi asla üçüncü taraf sunucular üzerinden yönlendirmez**. Tamamen yerel makinenizde çalışır; standart TCP/TLS parçalama (fragmentation) tekniklerini uygulayarak İSS'nin trafiğinizdeki SNI alanını okumasını engeller. Bağlantınız doğrudan kalır, hızınızdan ödün verilmez ve tarama verileriniz cihazınızda kalır.
 
 Her şey cihazınızda gerçekleşir; bu da maksimum gizlilik ve sıfır gecikme anlamına gelir.
 
@@ -82,13 +82,13 @@ O zamana kadar OffVeil, macOS DPI bypass ekosisteminde bulunan en sağlam ve yö
 
 ## Karşılaştırma
 
-macOS DPI bypass ekosistemi büyük ölçüde komut satırı (CLI) araçlarından oluşmaktadır. OffVeil, teknik etkinlik ile Apple platformlarında günlük kullanım kolaylığı arasındaki bu boşluğu doldurmayı hedefler.
+macOS ağ gizliliği ekosistemi büyük ölçüde komut satırı (CLI) araçlarından oluşmaktadır. OffVeil, teknik etkinlik ile Apple platformlarında günlük kullanım kolaylığı arasındaki bu boşluğu doldurmayı hedefler.
 
 | Özellik | **offveil (macOS)** | SpoofDPI (ham) | ByeDPI (ham) | Surge |
 |---------|:-----------:|:--------:|:------:|:-----:|
 | **Platform** | **macOS** | macOS | macOS | macOS |
 | **Arayüz (UI)** | **Native GUI** | CLI (Terminal) | CLI (Terminal) | Native GUI |
-| **Bypass Yöntemi** | **DPI Bypass (Yerel Proxy)** | HTTP Proxy | SOCKS Proxy | Kural Tabanlı Proxy |
+| **Gizlilik Yöntemi** | **TLS Parçalama (Yerel Proxy)** | HTTP Proxy | SOCKS Proxy | Kural Tabanlı Proxy |
 | **Sistem Proxy Yön.**| **Otomatik** | Manuel | Manuel | Otomatik |
 | **Ağ Değişimi Tespiti**| **Otomatik** | Manuel | Manuel | Manuel |
 | **Çökme Kurtarma** | **Otomatik** | Yok | Yok | Yok |
@@ -128,13 +128,21 @@ Bu ilk kurulum adimlarindan sonra offveil tum sonraki acilislarda normal sekilde
 
 ## Projemize Destek Olun
 
-Eğer offveil sizin için perdeyi kaldırmayı ve açık internete erişiminizi sorunsuzca sağlamayı başardıysa, projemizin büyümesi için yapabileceğiniz en basit ve etkili şey bu depoyu (repository) **Yıldızlamaktır (Star ⭐)**. Bu, projenin görünürlüğünü artırır ve benzer sansürlerle karşılaşan diğer kullanıcıların aracı keşfetmesine yardımcı olur.
+Eğer offveil ağ gizliliğinizi korumaya ve tarama deneyiminizi iyileştirmeye katkı sağladıysa, projenin büyümesi için yapabileceğiniz en basit ve etkili şey bu depoyu **Yıldızlamaktır (Star ⭐)**. Bu, projenin görünürlüğünü artırır ve ağ gizliliğine önem veren diğer kullanıcıların aracı keşfetmesine yardımcı olur.
 
 <p align="center">
   <a href="https://github.com/berkaykyb/offveil-macOS/stargazers">
     <img src="https://img.shields.io/github/stars/berkaykyb/offveil-macOS?style=for-the-badge&color=ffcc00&label=%E2%AD%90%20OffVeil'i%20Y%C4%B1ld%C4%B1zla" alt="Star on GitHub" />
   </a>
 </p>
+
+---
+
+## Yasal Uyarı
+
+offveil, yerel proxy düzeyinde standart ve kamuya açık TCP/TLS parçalama (fragmentation) tekniklerini uygulayan, genel amaçlı bir ağ gizliliği aracıdır. Trafiğinizi hiçbir üçüncü taraf sunucuya yönlendirmez ve bir VPN servisi değildir.
+
+Kullanıcılar, bu yazılımı kullanırken yürürlükteki yerel mevzuata ve eriştikleri platformların kullanım koşullarına uyma konusunda tamamen kendi sorumluluklarını kabul etmiş sayılır. Geliştirici, yasadışı herhangi bir kullanımı desteklemez veya teşvik etmez.
 
 ---
 
@@ -147,5 +155,5 @@ OffVeil (macOS) v1.x, temel paket parçalama yetenekleri için açık kaynaklı 
 Bu projenin vizyonunu ilk oluşturan takım arkadaşım **[@erayselim](https://github.com/erayselim)**'e özel teşekkürler.
 
 <p align="center">
-  <sub>Perdeyi kaldırıyoruz. Açık webi geri getiriyoruz.</sub>
+  <sub>Bağlantınızı koruyoruz. Verilerinizi gizli tutuyoruz.</sub>
 </p>

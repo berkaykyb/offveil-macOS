@@ -3,7 +3,7 @@
 </p>
 
 <h3 align="center">
-  Native DPI bypass engine for macOS - no VPN, no external servers, no speed loss.
+  Native network privacy engine for macOS - no VPN, no external servers, no speed loss.
 </h3>
 
 <p align="center">
@@ -21,9 +21,9 @@
 
 ## What is offveil?
 
-**offveil** is a lightweight system-tray application designed to circumvent **Deep Packet Inspection (DPI)** restrictions effortlessly. 
+**offveil** is a lightweight system-tray application that protects your connection from **Deep Packet Inspection (DPI)** — a technique used by Internet Service Providers to analyze and throttle your network traffic based on domain names (SNI).
 
-Unlike traditional VPNs, OffVeil **never routes your traffic through third-party servers**. It operates entirely on your local machine. Your connection remains direct, and your download/upload speeds are uncompromised - the only change is that ISPs can no longer inspect or block your traffic based on domain names (SNI).
+Unlike traditional VPNs, OffVeil **never routes your traffic through third-party servers**. It operates entirely on your local machine using standard TCP/TLS fragmentation, preventing your ISP from reading the SNI field in your traffic. Your connection remains direct, your speeds are unaffected, and your browsing data stays on your device.
 
 Everything happens on-device, ensuring maximum privacy and zero latency overhead.
 
@@ -83,13 +83,13 @@ Until then, OffVeil provides the most robust GUI and lifecycle management wrappe
 
 ## Comparison
 
-The macOS DPI bypass ecosystem is sparse and heavily CLI-oriented. OffVeil bridges the gap between technical efficacy and everyday usability on Apple platforms.
+The macOS network privacy ecosystem is sparse and heavily CLI-oriented. OffVeil bridges the gap between technical efficacy and everyday usability on Apple platforms.
 
 | Feature | **offveil (macOS)** | SpoofDPI (raw) | ByeDPI (raw) | Surge |
 |---------|:-----------:|:--------:|:------:|:-----:|
 | **Platform** | **macOS** | macOS | macOS | macOS |
 | **Interface** | **Native GUI** | CLI | CLI | Native GUI |
-| **Bypass Method** | **DPI Bypass via Local Proxy** | HTTP Proxy | SOCKS Proxy | Rules-based Proxy |
+| **Privacy Method** | **TLS Fragmentation via Local Proxy** | HTTP Proxy | SOCKS Proxy | Rules-based Proxy |
 | **System Proxy Mgt** | **Automatic** | Manual | Manual | Automatic |
 | **Network Rebind** | **Automatic** | Manual | Manual | Manual |
 | **Crash Recovery** | **Automatic** | N/A | N/A | N/A |
@@ -129,13 +129,21 @@ After this initial setup, offveil will open normally on all subsequent launches.
 
 ## Supported by the Community
 
-If offveil has successfully lifted the veil for you and restored your access to the open internet, the simplest and most effective way to help the project grow is to **Star** this repository. It increases visibility and helps other users facing similar restrictions discover the tool.
+If offveil has helped protect your network privacy and improved your browsing experience, the simplest and most effective way to support the project is to **Star** this repository. It increases visibility and helps other users who care about network privacy discover the tool.
 
 <p align="center">
   <a href="https://github.com/berkaykyb/offveil-macOS/stargazers">
     <img src="https://img.shields.io/github/stars/berkaykyb/offveil-macOS?style=for-the-badge&color=ffcc00&label=%E2%AD%90%20Star%20offveil" alt="Star on GitHub" />
   </a>
 </p>
+
+---
+
+## Legal Disclaimer
+
+offveil is a general-purpose network privacy tool that applies standard, publicly documented TCP/TLS fragmentation techniques at the local proxy level. It does not route your traffic through any third-party servers and is not a VPN service.
+
+Users are solely responsible for ensuring their use of this software complies with all applicable local laws, regulations, and the terms of service of any platforms they access. The developer does not endorse, encourage, or facilitate any unlawful activity.
 
 ---
 
@@ -148,5 +156,5 @@ OffVeil (macOS) v1.x utilizes the excellent open-source project **[SpoofDPI](htt
 A special thanks to **[@erayselim](https://github.com/erayselim)** for inspiring the original vision behind this project.
 
 <p align="center">
-  <sub>Lifting the veil. Restoring the open web.</sub>
+  <sub>Protecting your connection. Keeping your data private.</sub>
 </p>
